@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador BIM com Medição de Ângulo e Distância</title>
+    
+    <link id="modeStylesheet" rel="stylesheet" href="styles.css">
+    
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@xeokit/xeokit-sdk@latest/dist/xeokit-sdk.min.es.js"></script>
+</head>
+<body>
+    <canvas id="meuCanvas"></canvas>
+
+    <canvas id="myNavCubeCanvas"></canvas>
+
+    <div id="toolbar" aria-expanded="false">
+        <button
+            id="btnAngle"
+            class="tool-button"
+            onclick="setMeasurementMode('angle', this)"
+            title="Medir Ângulo (Transferidor)"
+    >
+            <span style="font-size: 1.2em;">📐</span>
+            Ângulo
+        </button>
+
+        <button 
+            id="btnDistance" 
+            class="tool-button" 
+            onclick="setMeasurementMode('distance', this)" 
+            title="Medir Distância (Régua)"
+        >
+            <span style="font-size: 1.2em;">📏</span>
+            Distância
+        </button>
+
+        <button 
+            id="btnDeactivate" 
+            class="tool-button" 
+            onclick="setMeasurementMode('none', this)" 
+            title="Desativar Medição"
+        >
+            <span style="font-size: 1.2em;">🚫</span>
+            Desativar
+        </button>
+        
+        <button 
+             id="btnToggleTree"
+            class="tool-button"
+            onclick="toggleTreeView()"
+            title="Mostrar/Esconder Pavimentos"
+        >
+            <span style="font-size: 1.2em;">🏢</span>
+            Pavimentos
+        </button>
+
+        <button
+            id="btnGrid"
+            class="tool-button"
+            onclick="toggleGrid()"
+            title="Mostrar/Esconder Grade no Solo"
+        >
+            <span style="font-size: 1.2em;">🟩</span>
+            Grade
+        </button>
+        
+        <button
+            id="btnSectionPlane"
+            class="tool-button"
+            onclick="toggleSectionPlane(this)"
+            title="Plano de Corte (Horizontal)"
+        >
+            <span style="font-size: 1.2em;">🔪</span>
+            Corte
+        </button>
+
+        <button
+            id="btnSAO"
+            class="tool-button"
+            title="Ajustar Scalable Ambient Obscurance"
+        >
+            <span style="font-size: 1.2em;">❔</span>
+            SAO
+        </button>
+        <button
+            id="btnTransformPanel"
+            class="tool-button"
+            title="Ajustar origem e rotação do modelo"
+        >
+            <span style="font-size: 1.2em;">🧭</span>
+            Origem/Rotação
+        </button>
+    </div>
+    <button id="mobileToolbarToggle" type="button" aria-label="Mostrar todas as ferramentas" title="Mostrar todas as ferramentas" hidden>
+        ☰ Mais ferramentas
+    </button>
+    <div id="treeViewContainer"></div>
+    <div id="saoPanel" hidden>
+        <div class="sao-panel-header">
+            <div>
+                <div class="sao-panel-title">Scalable Ambient Obscurance</div>
+                <div class="sao-panel-subtitle">Ajuste o efeito de sombras suaves</div>
+            </div>
+            <button id="closeSaoPanel" type="button" aria-label="Fechar painel">✕</button>
+        </div>
+
+        <div class="sao-control">
+            <label for="saoEnabled">Ativar SAO</label>
+            <input type="checkbox" id="saoEnabled" />
+        </div>
+
+        <div class="sao-control">
+            <label for="saoBlur">Aplicar desfoque</label>
+            <input type="checkbox" id="saoBlur" />
+        </div>
+
+        <div class="sao-control">
+            <label for="saoIntensity">Intensidade <span class="sao-value" id="saoIntensityValue"></span></label>
+            <input type="range" id="saoIntensity" min="0" max="2" step="0.01" />
+        </div>
+
+        <div class="sao-control">
+            <label for="saoKernelRadius">Raio (kernel) <span class="sao-value" id="saoKernelRadiusValue"></span></label>
+            <input type="range" id="saoKernelRadius" min="1" max="200" step="1" />
+        </div>
+
+        <div class="sao-control">
+            <label for="saoBias">Bias <span class="sao-value" id="saoBiasValue"></span></label>
+            <input type="range" id="saoBias" min="0" max="1" step="0.01" />
+        </div>
+
+        <div class="sao-control">
+            <label for="saoScale">Escala <span class="sao-value" id="saoScaleValue"></span></label>
+            <input type="range" id="saoScale" min="0" max="3" step="0.01" />
+        </div>
+
+        <div class="sao-control">
+            <label for="saoMinResolution">Resolução mínima <span class="sao-value" id="saoMinResolutionValue"></span></label>
+            <input type="range" id="saoMinResolution" min="0" max="2" step="0.01" />
+        </div>
+
+        <div class="sao-control">
+            <label for="saoNumSamples">Amostras <span class="sao-value" id="saoNumSamplesValue"></span></label>
+            <input type="range" id="saoNumSamples" min="1" max="32" step="1" />
+        </div>
+
+        <div class="sao-control">
+            <label for="saoBlendCutoff">Blend cutoff <span class="sao-value" id="saoBlendCutoffValue"></span></label>
+            <input type="range" id="saoBlendCutoff" min="0" max="1" step="0.01" />
+        </div>
+
+        <div class="sao-control">
+            <label for="saoBlendFactor">Blend factor <span class="sao-value" id="saoBlendFactorValue"></span></label>
+            <input type="range" id="saoBlendFactor" min="0" max="2" step="0.01" />
+        </div>
+    </div>
+    <div id="transformPanel" hidden>
+        <div class="transform-panel-header">
+            <div>
+                <div class="transform-panel-title">Origem & Rotação</div>
+                <div class="transform-panel-subtitle">Reposicione um modelo XKT fora da origem</div>
+            </div>
+            <button id="closeTransformPanel" type="button" aria-label="Fechar painel">✕</button>
+        </div>
+
+        <label class="transform-label" for="transformModelSelect">Modelo</label>
+        <select id="transformModelSelect" aria-label="Escolha o modelo para ajustar"></select>
+
+        <div class="transform-grid">
+            <label class="transform-field">
+                Deslocamento X (m)
+                <input type="number" id="offsetX" step="0.1" value="0" />
+            </label>
+            <label class="transform-field">
+                Deslocamento Y (m)
+                <input type="number" id="offsetY" step="0.1" value="0" />
+            </label>
+            <label class="transform-field">
+                Deslocamento Z (m)
+                <input type="number" id="offsetZ" step="0.1" value="0" />
+            </label>
+        </div>
+
+        <div class="transform-grid">
+            <label class="transform-field">
+                Rotação Y (°)
+                <input type="number" id="rotationY" step="1" value="0" />
+            </label>
+        </div>
+
+        <div class="transform-actions">
+            <button type="button" id="applyTransformButton">Aplicar</button>
+            <button type="button" id="resetTransformButton">Restaurar origem</button>
+        </div>
+
+        <p class="transform-hint">A translação muda a origem do modelo; a rotação é aplicada em torno dessa origem.</p>
+    </div>
+    <div id="modeSwitcher" aria-label="Alternar modo de visualização">
+        <button type="button" class="mode-button active" data-mode="desktop">Versão Computador</button>
+        <button type="button" class="mode-button" data-mode="mobile">Versão Celular</button>
+    </div>
+    <div id="creditNote" role="note" aria-label="Responsável pelo programa">
+        Responsável pelo programa: Rodrigo Damasceno Nascimento
+    </div>
+    <script type="module" src="app.js"></script>
+    <script>
+        const modeStylesheet = document.getElementById('modeStylesheet');
+        const modeButtons = document.querySelectorAll('#modeSwitcher [data-mode]');
+        const toolbar = document.getElementById('toolbar');
+        const mobileToolbarToggle = document.getElementById('mobileToolbarToggle');
+
+        const MOBILE_LABELS = {
+            open: '⬆ Minimizar ferramentas',
+            closed: '☰ Mais ferramentas'
+        };
+
+        function updateMobileLabels(isOpen) {
+            const label = isOpen ? MOBILE_LABELS.open : MOBILE_LABELS.closed;
+            toolbar.dataset.label = label;
+            mobileToolbarToggle.textContent = label;
+            mobileToolbarToggle.setAttribute('aria-label', label);
+            mobileToolbarToggle.setAttribute('title', label);
+        }
+
+        function toggleMobileToolbar(forceOpen) {
+            const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !toolbar.classList.contains('open');
+            toolbar.classList.toggle('open', shouldOpen);
+            toolbar.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+            mobileToolbarToggle.setAttribute('aria-pressed', shouldOpen ? 'true' : 'false');
+            updateMobileLabels(shouldOpen);
+        }
+        function applyMode(mode) {
+            if (mode !== 'mobile' && mode !== 'desktop') {
+                mode = 'desktop';
+            }            let stylesheet = 'styles.css';
+
+            if (mode === 'mobile') {
+                stylesheet = 'styles-mobile.css';
+            }
+            if (modeStylesheet.getAttribute('href') !== stylesheet) {
+                modeStylesheet.setAttribute('href', stylesheet);
+            }
+            modeButtons.forEach((button) => {
+                button.classList.toggle('active', button.dataset.mode === mode);
+            });
+
+            document.body.dataset.mode = mode;
+
+            const isMobileMode = mode === 'mobile';
+            mobileToolbarToggle.hidden = !isMobileMode;
+            toggleMobileToolbar(false);
+
+
+            localStorage.setItem('preferredMode', mode);
+        }
+
+        modeButtons.forEach((button) => {
+            button.addEventListener('click', () => applyMode(button.dataset.mode));
+        });
+
+        mobileToolbarToggle.addEventListener('click', () => toggleMobileToolbar());
+
+        toolbar.addEventListener('click', (event) => {
+            if (document.body.dataset.mode !== 'mobile') {
+                return;
+            }
+
+            const clickedButton = event.target.closest('.tool-button');
+            const isOpen = toolbar.classList.contains('open');
+            const isHeaderClick = !clickedButton && event.target === toolbar;
+
+            if (!isOpen && !clickedButton) {
+                event.preventDefault();
+                event.stopPropagation();
+                toggleMobileToolbar(true);
+                return;
+            }
+            if (!isOpen && clickedButton) {
+                toggleMobileToolbar(true);
+                return;
+            }
+
+            if (isOpen && isHeaderClick) {
+                event.preventDefault();
+                toggleMobileToolbar(false);
+            }
+        });
+        
+        document.addEventListener('click', (event) => {
+            if (document.body.dataset.mode !== 'mobile') {
+                return;
+            }
+            const isToolbarClick = toolbar.contains(event.target);
+            const isToggleClick = mobileToolbarToggle.contains(event.target);
+
+            if (toolbar.classList.contains('open') && !isToolbarClick && !isToggleClick) {
+                toggleMobileToolbar(false);
+            }
+        });
+
+        updateMobileLabels(false);
+        applyMode(localStorage.getItem('preferredMode') || 'desktop');
+    </script>
+</body>
+</html>
+
+
+
