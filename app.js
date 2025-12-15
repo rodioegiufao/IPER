@@ -516,8 +516,8 @@ async function loadDefaultModel({ id, src }) {
 }
 
 const defaultModels = [
-    //{ id: "IFC_LOG_TEF", src: "assets/modelo-02.xkt" },
-    //{ id: "IFC_ELE", src: "assets/modelo-01.xkt" },
+    { id: "IFC_LOG_TEF", src: "assets/modelo-02.xkt" },
+    { id: "IFC_ELE", src: "assets/modelo-01.xkt" },
     //{ id: "IFC_SPDA", src: "assets/modelo-03.xkt" },
     //{ id: "IFC_ECX", src: "assets/modelo-04.xkt" },
     //{ id: "IFC_ILUX", src: "assets/modelo-05.xkt" },
@@ -527,14 +527,13 @@ const defaultModels = [
     //{ id: "IFC_HID", src: "assets/modelo-03.xkt" },
     //{ id: "IFC_PLU", src: "assets/modelo-10.xkt" },
     //{ id: "IFC_GLP", src: "assets/modelo-11.xkt" },
-    { id: "IFC_ARQ", src: "assets/modelo-06.xkt" },
+    //{ id: "IFC_ARQ", src: "assets/modelo-06.xkt" },
     //{ id: "IFC_EST_SUB", src: "assets/modelo-13.xkt" },
     //{ id: "IFC_CLI_DUT", src: "assets/modelo-14.xkt" },
     //{ id: "IFC_EXA", src: "assets/modelo-15.xkt" },
     //{ id: "IFC_CLI", src: "assets/modelo-16.xkt" },
     //{ id: "IFC_EST_CT", src: "assets/modelo-17.xkt" },
-    //{ id: "IFC_ALI", src: "assets/modelo-04.xkt" },
-    //{ id: "IFC_ALI_380", src: "assets/modelo-19.xkt" },
+    { id: "IFC_ALI", src: "assets/modelo-04.xkt" },
 ];
 
 defaultModels.forEach(loadDefaultModel);
