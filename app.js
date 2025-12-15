@@ -249,7 +249,8 @@ const originalTransforms = new Map();
 const DEFAULT_MODEL_TRANSFORMS = {
     //IFC_ILUX: { position: [-14.08, 0, 0] },
     IFC_EST: { position: [-8.8, 0.4, 22.5] },
-    IFC_LOG_TEF: { position: [0, 0, 0], rotation: [0, 90, 0] },
+    IFC_LOG_TEF: { position: [0, 0, -0.17], rotation: [0, 90, 0] },
+    IFC_ELE: { position: [0, 0, -0.17] },
     //IFC_ECX: { position: [-14.08, 0, 0] },
     //IFC_SAN: { position: [-1, 0, -14.1] },
     //IFC_INC: { position: [-1, 0, -14.1] },
@@ -1331,6 +1332,7 @@ viewer.scene.canvas.canvas.addEventListener('contextmenu', (event) => {
     canvasElement.addEventListener('touchend', endTouch, { passive: false });
     canvasElement.addEventListener('touchcancel', clearTouch, { passive: true });
 })();
+
 
 
 
