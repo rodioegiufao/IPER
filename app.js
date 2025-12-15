@@ -524,7 +524,7 @@ const defaultModels = [
     { id: "IFC_EST", src: "assets/modelo-05.xkt" },
     //{ id: "IFC_SAN", src: "assets/modelo-07.xkt" },
     //{ id: "IFC_INC", src: "assets/modelo-08.xkt" },
-    //{ id: "IFC_HID", src: "assets/modelo-03.xkt" },
+    { id: "IFC_HID", src: "assets/modelo-03.xkt" },
     //{ id: "IFC_PLU", src: "assets/modelo-10.xkt" },
     //{ id: "IFC_GLP", src: "assets/modelo-11.xkt" },
     //{ id: "IFC_ARQ", src: "assets/modelo-06.xkt" },
