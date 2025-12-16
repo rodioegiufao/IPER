@@ -267,6 +267,7 @@ const DEFAULT_MODEL_TRANSFORMS = {
     IFC_EST_SQD: { position: [18.1, -0.4, -13.92] },
     IFC_EST_SUB: { position: [27.66, -0.4, -22.35], rotation: [0, -84, 0] },
     IFC_EST_CT: { position: [-14.4, -0.4, -16.27], rotation: [0, 90, 0]  },
+    IFC_EST_MR: { position: [50, 0, 0], rotation: [0, 0, 0]  },
 };
 
 const transformPanel = document.getElementById("transformPanel");
@@ -539,7 +540,8 @@ const defaultModels = [
     //{ id: "IFC_ALI", src: "assets/modelo-04.xkt" },
     { id: "IFC_EST_SQD", src: "assets/modelo-10.xkt" },
     { id: "IFC_EST_SUB", src: "assets/modelo-11.xkt" },
-    { id: "IFC_EST_CT", src: "assets/modelo-12.xkt" },
+    { id: "IFC_EST_CT", src: "assets/modelo-12.xkt" }
+    { id: "IFC_EST_MR", src: "assets/modelo-13.xkt" },,
 ];
 
 defaultModels.forEach(loadDefaultModel);
@@ -1337,6 +1339,7 @@ viewer.scene.canvas.canvas.addEventListener('contextmenu', (event) => {
     canvasElement.addEventListener('touchend', endTouch, { passive: false });
     canvasElement.addEventListener('touchcancel', clearTouch, { passive: true });
 })();
+
 
 
 
