@@ -257,7 +257,7 @@ const DEFAULT_MODEL_TRANSFORMS = {
     //IFC_HID: { position: [0.2, 0, 13.9], rotation: [0, 90, 0] },
     //IFC_PLU: { position: [0.2, 0, 13.9], rotation: [0, 90, 0] },
     //IFC_GLP: { position: [13.03, 0, -14.05] },
-    //IFC_ARQ: { position: [13.03, 0, -14.05], rotation: [0, 90, 0]  },
+    IFC_ARQ: { position: [0, 0, 13.9], rotation: [0, 90, 0]  },
     //IFC_EST_SUB: { position: [-41.57, 0.4, 15.5], rotation: [0, 90, 0]  },
     //IFC_CLI_DUT: { position: [13, 0, 0], rotation: [0, 90, 0]  },
     //IFC_EXA: { position: [13.03, 0, -14.05] },
@@ -1332,6 +1332,7 @@ viewer.scene.canvas.canvas.addEventListener('contextmenu', (event) => {
     canvasElement.addEventListener('touchend', endTouch, { passive: false });
     canvasElement.addEventListener('touchcancel', clearTouch, { passive: true });
 })();
+
 
 
 
