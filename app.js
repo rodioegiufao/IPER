@@ -540,7 +540,7 @@ const defaultModels = [
     //{ id: "IFC_ALI", src: "assets/modelo-04.xkt" },
     { id: "IFC_EST_SQD", src: "assets/modelo-10.xkt" },
     { id: "IFC_EST_SUB", src: "assets/modelo-11.xkt" },
-    { id: "IFC_EST_CT", src: "assets/modelo-12.xkt" }
+    { id: "IFC_EST_CT", src: "assets/modelo-12.xkt" },
     { id: "IFC_EST_MR", src: "assets/modelo-13.xkt" },,
 ];
 
@@ -1339,6 +1339,7 @@ viewer.scene.canvas.canvas.addEventListener('contextmenu', (event) => {
     canvasElement.addEventListener('touchend', endTouch, { passive: false });
     canvasElement.addEventListener('touchcancel', clearTouch, { passive: true });
 })();
+
 
 
 
