@@ -249,21 +249,21 @@ const originalTransforms = new Map();
 const DEFAULT_MODEL_TRANSFORMS = {
     //IFC_ILUX: { position: [-14.08, 0, 0] },
     IFC_EST: { position: [-8.8, 0.4, 22.5] },
-    //IFC_LOG_TEF: { position: [0.15, 0, -0.17], rotation: [0, 90, 0] },
-    //IFC_ELE: { position: [0.15, 0, -0.17] },
+    IFC_LOG_TEF: { position: [0.15, 0, -0.17], rotation: [0, 90, 0] },
+    IFC_ELE: { position: [0.15, 0, -0.17] },
     //IFC_ECX: { position: [-14.08, 0, 0] },
-    //IFC_SAN: { position: [0.2, 0, 13.9], rotation: [0, 90, 0] },
-    //IFC_INC: { position: [0.15, 0, -0.15], rotation: [0, 90, 0] },
-    //IFC_HID: { position: [0.2, 0, 13.9], rotation: [0, 90, 0] },
-    //IFC_PLU: { position: [0.2, 0, 13.9], rotation: [0, 90, 0] },
+    IFC_SAN: { position: [0.2, 0, 13.9], rotation: [0, 90, 0] },
+    IFC_INC: { position: [0.15, 0, -0.15], rotation: [0, 90, 0] },
+    IFC_HID: { position: [0.2, 0, 13.9], rotation: [0, 90, 0] },
+    IFC_PLU: { position: [0.2, 0, 13.9], rotation: [0, 90, 0] },
     //IFC_GLP: { position: [13.03, 0, -14.05] },
-    IFC_ARQ: { position: [0.16, 0, 13.9], rotation: [0, 90, 0]  },
+    //IFC_ARQ: { position: [0.16, 0, 13.9], rotation: [0, 90, 0]  },
     //IFC_EST_SUB: { position: [-41.57, 0.4, 15.5], rotation: [0, 90, 0]  },
     //IFC_CLI_DUT: { position: [13, 0, 0], rotation: [0, 90, 0]  },
     //IFC_EXA: { position: [13.03, 0, -14.05] },
     //IFC_CLI: { position: [-0.5, 0, -14.05] },
     //IFC_EST_CT: { position: [-54, 0, -5.3] },
-    //IFC_ALI: { position: [0.15, 0, -0.17] },
+    IFC_ALI: { position: [0.15, 0, -0.17] },
     IFC_EST_SQD: { position: [18.1, -0.4, -13.92] },
     IFC_EST_SUB: { position: [27.66, 0, -22.35], rotation: [0, -84, 0] },
     IFC_EST_CT: { position: [-14.4, -0.4, -16.27], rotation: [0, 90, 0]  },
@@ -521,24 +521,22 @@ async function loadDefaultModel({ id, src }) {
 }
 
 const defaultModels = [
-    //{ id: "IFC_LOG_TEF", src: "assets/modelo-02.xkt" },
-    //{ id: "IFC_ELE", src: "assets/modelo-01.xkt" },
+    { id: "IFC_LOG_TEF", src: "assets/modelo-02.xkt" },
+    { id: "IFC_ELE", src: "assets/modelo-01.xkt" },
     //{ id: "IFC_SPDA", src: "assets/modelo-03.xkt" },
     //{ id: "IFC_ECX", src: "assets/modelo-04.xkt" },
     //{ id: "IFC_ILUX", src: "assets/modelo-05.xkt" },
     { id: "IFC_EST", src: "assets/modelo-05.xkt" },
-    //{ id: "IFC_SAN", src: "assets/modelo-08.xkt" },
-    //{ id: "IFC_INC", src: "assets/modelo-09.xkt" },
-    //{ id: "IFC_HID", src: "assets/modelo-03.xkt" },
-    //{ id: "IFC_PLU", src: "assets/modelo-07.xkt" },
+    { id: "IFC_SAN", src: "assets/modelo-08.xkt" },
+    { id: "IFC_INC", src: "assets/modelo-09.xkt" },
+    { id: "IFC_HID", src: "assets/modelo-03.xkt" },
+    { id: "IFC_PLU", src: "assets/modelo-07.xkt" },
     //{ id: "IFC_GLP", src: "assets/modelo-11.xkt" },
     { id: "IFC_ARQ", src: "assets/modelo-06.xkt" },
-    //{ id: "IFC_EST_SUB", src: "assets/modelo-13.xkt" },
     //{ id: "IFC_CLI_DUT", src: "assets/modelo-14.xkt" },
     //{ id: "IFC_EXA", src: "assets/modelo-15.xkt" },
     //{ id: "IFC_CLI", src: "assets/modelo-16.xkt" },
-    //{ id: "IFC_EST_CT", src: "assets/modelo-17.xkt" },
-    //{ id: "IFC_ALI", src: "assets/modelo-04.xkt" },
+    { id: "IFC_ALI", src: "assets/modelo-04.xkt" },
     { id: "IFC_EST_SQD", src: "assets/modelo-10.xkt" },
     { id: "IFC_EST_SUB", src: "assets/modelo-11.xkt" },
     { id: "IFC_EST_CT", src: "assets/modelo-12.xkt" },
@@ -1341,6 +1339,7 @@ viewer.scene.canvas.canvas.addEventListener('contextmenu', (event) => {
     canvasElement.addEventListener('touchend', endTouch, { passive: false });
     canvasElement.addEventListener('touchcancel', clearTouch, { passive: true });
 })();
+
 
 
 
