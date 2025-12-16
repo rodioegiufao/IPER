@@ -264,7 +264,7 @@ const DEFAULT_MODEL_TRANSFORMS = {
     //IFC_CLI: { position: [-0.5, 0, -14.05] },
     //IFC_EST_CT: { position: [-54, 0, -5.3] },
     //IFC_ALI: { position: [0.15, 0, -0.17] },
-    //IFC_ALI_380: { position: [-14.08, 0, 0] },
+    IFC_EST_SQD: { position: [-50, 0, 0] },
 };
 
 const transformPanel = document.getElementById("transformPanel");
@@ -535,6 +535,7 @@ const defaultModels = [
     //{ id: "IFC_CLI", src: "assets/modelo-16.xkt" },
     //{ id: "IFC_EST_CT", src: "assets/modelo-17.xkt" },
     //{ id: "IFC_ALI", src: "assets/modelo-04.xkt" },
+    { id: "IFC_EST_SQD", src: "assets/modelo-10.xkt" },
 ];
 
 defaultModels.forEach(loadDefaultModel);
@@ -1332,6 +1333,7 @@ viewer.scene.canvas.canvas.addEventListener('contextmenu', (event) => {
     canvasElement.addEventListener('touchend', endTouch, { passive: false });
     canvasElement.addEventListener('touchcancel', clearTouch, { passive: true });
 })();
+
 
 
 
