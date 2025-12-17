@@ -1566,7 +1566,6 @@ const materialContextMenu = new ContextMenu({
                 }
             },
             {
-            {
                 title: "Ocultar Todos",
                 getEnabled: (context) => context.viewer.scene.numVisibleObjects > 0,
                 doAction: (context) => {
@@ -1697,6 +1696,7 @@ viewer.scene.canvas.canvas.addEventListener('contextmenu', (event) => {
     canvasElement.addEventListener('touchend', endTouch, { passive: false });
     canvasElement.addEventListener('touchcancel', clearTouch, { passive: true });
 })();
+
 
 
 
