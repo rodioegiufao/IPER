@@ -985,6 +985,7 @@ function findAndRenderCollisions(modelId) {
 function desativarMedicao() {
     const deactivateButton = document.getElementById("btnDeactivate");
     setMeasurementMode("none", deactivateButton);
+    closePropertyPanel();
 }
 
 document.addEventListener("keydown", (event) => {
@@ -1000,9 +1001,14 @@ document.addEventListener("keydown", (event) => {
         desativarMedicao();
         return;
     }
-
+    
     if (key === "r") {
         resetXRay();
+        return;
+    }
+
+    if (key === "m") {
+        showAllEntities();
         return;
     }
 
@@ -1429,12 +1435,30 @@ function isolateEntity(entity) {
     });
 }
 
+function showAllEntities() {
+    const scene = viewer.scene;
+
+    if (!scene) {
+        return;
+    }
+
+    scene.setObjectsVisible(scene.objectIds, true);
+    scene.setObjectsXRayed(scene.xrayedObjectIds, false);
+    scene.setObjectsSelected(scene.selectedObjectIds, false);
+}
+
+function closePropertyPanel() {
+    const painel = document.getElementById("propertyPanel");
+    if (painel) {
+        painel.remove();
+    }
+}
+
 function showMaterialProperties(entity) {
     if (!entity?.id) {
         alert("Nenhuma entidade selecionada.");
         return;
     }
-
     const metaObject = viewer.metaScene.metaObjects[entity.id];
 
     if (!metaObject) {
@@ -1511,9 +1535,7 @@ function showMaterialProperties(entity) {
     `;
 
     // 🟢 Evento do botão X
-    document.getElementById("closePropertyPanel").onclick = () => {
-        painel.remove();
-    };
+    document.getElementById("closePropertyPanel").onclick = closePropertyPanel;
 }
 
 
@@ -1544,6 +1566,7 @@ const materialContextMenu = new ContextMenu({
                 }
             },
             {
+            {
                 title: "Ocultar Todos",
                 getEnabled: (context) => context.viewer.scene.numVisibleObjects > 0,
                 doAction: (context) => {
@@ -1556,12 +1579,7 @@ const materialContextMenu = new ContextMenu({
                     const scene = context.viewer.scene;
                     return scene.numVisibleObjects < scene.numObjects;
                 },
-                doAction: (context) => {
-                    const scene = context.viewer.scene;
-                    scene.setObjectsVisible(scene.objectIds, true);
-                    scene.setObjectsXRayed(scene.xrayedObjectIds, false);
-                    scene.setObjectsSelected(scene.selectedObjectIds, false);
-                }
+                doAction: showAllEntities
             }
         ],
         [
@@ -1679,5 +1697,6 @@ viewer.scene.canvas.canvas.addEventListener('contextmenu', (event) => {
     canvasElement.addEventListener('touchend', endTouch, { passive: false });
     canvasElement.addEventListener('touchcancel', clearTouch, { passive: true });
 })();
+
 
 
