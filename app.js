@@ -991,6 +991,10 @@ document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
         desativarMedicao();
     }
+
+    if (event.key && event.key.toLowerCase() === "r") {
+        resetXRay();
+    }
 });
 
 window.desativar = desativarMedicao;
@@ -1364,6 +1368,16 @@ viewer.cameraControl.on("doublePickedNothing", () => {
 // Desabilita o pan com o botão direito (para permitir o menu)
 viewer.cameraControl.panRightClick = false;
 
+function resetXRay() {
+    const scene = viewer.scene;
+
+    if (!scene || scene.numXRayedObjects === 0) {
+        return;
+    }
+
+    scene.setObjectsXRayed(scene.xrayedObjectIds, false);
+}
+
 // Cria o menu de contexto
 const materialContextMenu = new ContextMenu({
     enabled: true,
@@ -1619,3 +1633,4 @@ viewer.scene.canvas.canvas.addEventListener('contextmenu', (event) => {
     canvasElement.addEventListener('touchend', endTouch, { passive: false });
     canvasElement.addEventListener('touchcancel', clearTouch, { passive: true });
 })();
+
