@@ -55,6 +55,11 @@ const viewer = new Viewer({
     })
 });
 
+// Ajusta a cor do destaque (highlight) para azul
+const { highlightMaterial } = viewer.scene;
+highlightMaterial.color = [0, 0, 0];
+highlightMaterial.edgeColor = [0, 0, 0];
+
 /**
  * Configura o painel de ajustes do Scalable Ambient Obscurance (SAO).
  */
@@ -273,7 +278,6 @@ const DEFAULT_MODEL_TRANSFORMS = {
     IFC_EMT_ESC: { position: [0.14, 0.35, -0.15], rotation: [0, 90, 0]  },
     IFC_EMT_COB: { position: [0.14, 0, -0.15], rotation: [0, 90, 0]  },
 };
-
 const transformPanel = document.getElementById("transformPanel");
 const transformPanelToggleButton = document.getElementById("btnTransformPanel");
 const closeTransformPanelButton = document.getElementById("closeTransformPanel");
@@ -284,20 +288,28 @@ const offsetZInput = document.getElementById("offsetZ");
 const rotationYInput = document.getElementById("rotationY");
 const applyTransformButton = document.getElementById("applyTransformButton");
 const resetTransformButton = document.getElementById("resetTransformButton");
+const collisionPanel = document.getElementById("collisionPanel");
+const collisionPanelToggleButton = document.getElementById("btnCollisionPanel");
+const closeCollisionPanelButton = document.getElementById("closeCollisionPanel");
+const collisionModelASelect = document.getElementById("collisionModelA");
+const runCollisionCheckButton = document.getElementById("runCollisionCheck");
+const collisionSummary = document.getElementById("collisionSummary");
+const collisionResultsList = document.getElementById("collisionResults");
 
 setupSAOControls();
 setupTransformPanelControls();
+setupCollisionPanelControls();
 /**
  * Reseta a visibilidade de todos os objetos e remove qualquer destaque ou raio-x.
  */
 function resetModelVisibility() {
     if (modelIsolateController) {
         // Volta a exibir todos os objetos
-        modelIsolateController.setObjectsVisible(modelIsolateController.getObjectsIds(), true);
+        modelIsolateController.setObjectsVisible(getAllObjectIds(), true);
         // Remove X-ray
-        modelIsolateController.setObjectsXRayed(modelIsolateController.getObjectsIds(), false);
+        modelIsolateController.setObjectsXRayed(getAllObjectIds(), false);
         // Remove destaque
-        modelIsolateController.setObjectsHighlighted(modelIsolateController.getObjectsIds(), false);
+        modelIsolateController.setObjectsHighlighted(getAllObjectIds(), false);
         // Centraliza a câmera no modelo inteiro
         viewer.cameraFlight.jumpTo(viewer.scene);
     }
@@ -316,6 +328,30 @@ function requestRenderFrame() {
 function parseNumber(value, fallback = 0) {
     const parsed = parseFloat(value);
     return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function getAllObjectIds() {
+    if (!modelIsolateController) {
+        return [];
+    }
+
+    if (typeof modelIsolateController.getObjectsIds === "function") {
+        return modelIsolateController.getObjectsIds();
+    }
+
+    if (typeof modelIsolateController.getObjectIds === "function") {
+        return modelIsolateController.getObjectIds();
+    }
+
+    if (Array.isArray(modelIsolateController.objectIds)) {
+        return modelIsolateController.objectIds;
+    }
+
+    if (modelIsolateController.objects && typeof modelIsolateController.objects === "object") {
+        return Object.keys(modelIsolateController.objects);
+    }
+
+    return [];
 }
 
 function ensureModelOption(modelId) {
@@ -362,16 +398,18 @@ function registerModelTransform(model) {
     }
 
     ensureModelOption(model.id);
+    ensureCollisionOptions(model.id);
 
     if (transformModelSelect && !transformModelSelect.value) {
         transformModelSelect.value = model.id;
     }
 
+    setDefaultCollisionSelection();
+
     if (transformModelSelect) {
         syncTransformInputs(transformModelSelect.value);
     }
 }
-
 function applyTransformFromUI() {
     if (!transformModelSelect) {
         return;
@@ -418,6 +456,56 @@ function resetTransformFromUI() {
 
     syncTransformInputs(modelId);
     requestRenderFrame();
+}
+
+function ensureCollisionOptions(modelId) {
+    if (!collisionModelASelect) {
+        return;
+    }
+
+    const exists = Array.from(collisionModelASelect.options).some((option) => option.value === modelId);
+    if (!exists) {
+        const option = document.createElement("option");
+        option.value = modelId;
+        option.textContent = modelId;
+        collisionModelASelect.appendChild(option);
+    }
+}
+
+function setDefaultCollisionSelection() {
+    if (!collisionModelASelect) {
+        return;
+    }
+
+    if (!collisionModelASelect.value && collisionModelASelect.options.length > 0) {
+        collisionModelASelect.value = collisionModelASelect.options[0].value;
+    }
+}
+
+function setupCollisionPanelControls() {
+    if (!collisionPanel || !collisionSummary || !collisionResultsList) {
+        return;
+    }
+
+    const togglePanel = (forceState) => {
+        const shouldOpen = typeof forceState === "boolean" ? forceState : collisionPanel.hidden;
+        collisionPanel.hidden = !shouldOpen;
+        collisionPanelToggleButton?.classList.toggle("active", shouldOpen);
+    };
+
+    collisionPanelToggleButton?.addEventListener("click", () => togglePanel());
+    closeCollisionPanelButton?.addEventListener("click", () => togglePanel(false));
+
+    document.addEventListener("click", (event) => {
+        if (!collisionPanel.hidden && !collisionPanel.contains(event.target) && !collisionPanelToggleButton?.contains(event.target)) {
+            togglePanel(false);
+        }
+    });
+
+    runCollisionCheckButton?.addEventListener("click", () => {
+        const modelId = collisionModelASelect?.value;
+        findAndRenderCollisions(modelId);
+    });
 }
 
 /**
@@ -708,6 +796,192 @@ function setMeasurementMode(mode, clickedButton) {
 
 window.setMeasurementMode = setMeasurementMode;
 
+function getModelObjectIds(modelId) {
+    const ids = [];
+
+    // Tenta usar a lista de objetos do modelo (quando disponível)
+    const model = loadedModels.get(modelId);
+    if (model?.objectIds?.length) {
+        return [...model.objectIds];
+    }
+
+    // Fallback: filtra metaObjects pelo metaModel associado
+    const metaObjects = viewer.metaScene?.metaObjects || {};
+    for (const [objectId, metaObject] of Object.entries(metaObjects)) {
+        if (metaObject?.metaModel?.id === modelId) {
+            ids.push(objectId);
+        }
+    }
+    return ids;
+}
+
+function getObjectMetaModelId(objectId) {
+    const metaObjects = viewer.metaScene?.metaObjects || {};
+    const metaObject = metaObjects[objectId];
+
+    return metaObject?.metaModel?.id || null;
+}
+
+function intersectsAABB(aabbA, aabbB) {
+    if (!aabbA || !aabbB) {
+        return false;
+    }
+
+    return !(
+        aabbA[0] > aabbB[3] ||
+        aabbA[3] < aabbB[0] ||
+        aabbA[1] > aabbB[4] ||
+        aabbA[4] < aabbB[1] ||
+        aabbA[2] > aabbB[5] ||
+        aabbA[5] < aabbB[2]
+    );
+}
+
+function mergeAABBs(aabbs) {
+    const valid = aabbs.filter(Boolean);
+
+    if (!valid.length) {
+        return null;
+    }
+
+    const minX = Math.min(...valid.map((aabb) => aabb[0]));
+    const minY = Math.min(...valid.map((aabb) => aabb[1]));
+    const minZ = Math.min(...valid.map((aabb) => aabb[2]));
+    const maxX = Math.max(...valid.map((aabb) => aabb[3]));
+    const maxY = Math.max(...valid.map((aabb) => aabb[4]));
+    const maxZ = Math.max(...valid.map((aabb) => aabb[5]));
+
+    return [minX, minY, minZ, maxX, maxY, maxZ];
+}
+
+function isolateCollisionGroup(objectAId, collidingIds) {
+    if (!modelIsolateController) {
+        return;
+    }
+
+    const idsToFocus = [objectAId, ...collidingIds];
+    const allIds = getAllObjectIds();
+    const otherIds = allIds.filter((id) => !idsToFocus.includes(id));
+
+    // Limpa estados anteriores e mostra tudo em X-ray para manter o contexto
+    modelIsolateController.setObjectsVisible(allIds, true);
+    modelIsolateController.setObjectsXRayed(allIds, true);
+    modelIsolateController.setObjectsHighlighted(allIds, false);
+
+    // Realça a colisão e remove o X-ray apenas dos elementos em conflito
+    modelIsolateController.setObjectsVisible(idsToFocus, true);
+    modelIsolateController.setObjectsXRayed(idsToFocus, false);
+    viewer.scene.setObjectsHighlighted(idsToFocus, true);
+
+    if (otherIds.length) {
+        modelIsolateController.setObjectsHighlighted(otherIds, false);
+    }
+
+    const combinedAABB = mergeAABBs(idsToFocus.map((id) => viewer.scene.getAABB(id)));
+
+    if (combinedAABB) {
+        viewer.cameraFlight.flyTo({ aabb: combinedAABB, duration: 0.6 });
+    }
+
+    requestRenderFrame();
+}
+
+function renderCollisionResults(collisions) {
+    collisionResultsList.innerHTML = "";
+
+    if (!collisions.length) {
+        const emptyItem = document.createElement("li");
+        emptyItem.textContent = "Nenhuma colisão encontrada.";
+        emptyItem.classList.add("collision-summary");
+        collisionResultsList.appendChild(emptyItem);
+        return;
+    }
+
+    collisions.forEach(({ objectId, collidingWith }, index) => {
+        const item = document.createElement("li");
+        item.classList.add("collision-result-item");
+
+        const title = document.createElement("div");
+        title.classList.add("collision-result-title");
+        title.textContent = `#${index + 1}: Objeto ${objectId}`;
+
+        const list = document.createElement("div");
+        list.classList.add("collision-result-list");
+        list.textContent = "Colisão detectada com outro modelo.";
+
+        const actions = document.createElement("div");
+        actions.classList.add("collision-result-actions");
+
+        const focusBtn = document.createElement("button");
+        focusBtn.type = "button";
+        focusBtn.textContent = "Isolar colisão";
+        focusBtn.classList.add("collision-focus-btn");
+        focusBtn.addEventListener("click", () => isolateCollisionGroup(objectId, collidingWith));
+
+        actions.appendChild(focusBtn);
+        item.append(title, list, actions);
+        collisionResultsList.appendChild(item);
+    });
+}
+
+function findAndRenderCollisions(modelId) {
+    if (!modelId) {
+        collisionSummary.textContent = "Selecione um modelo para iniciar a análise.";
+        collisionResultsList.innerHTML = "";
+        return;
+    }
+
+    const objects = getModelObjectIds(modelId);
+    const targetIds = new Set(objects);
+    const externalObjects = getAllObjectIds().filter((id) => !targetIds.has(id) && getObjectMetaModelId(id) !== modelId);
+
+    if (!objects.length) {
+        collisionSummary.textContent = "Nenhum objeto encontrado no modelo selecionado.";
+        collisionResultsList.innerHTML = "";
+        return;
+    }
+
+    if (!externalObjects.length) {
+        collisionSummary.textContent = "Nenhum outro modelo carregado para comparar colisões.";
+        collisionResultsList.innerHTML = "";
+        return;
+    }
+
+    const collisionsMap = new Map();
+
+    const addCollision = (base, target) => {
+        if (!collisionsMap.has(base)) {
+            collisionsMap.set(base, new Set());
+        }
+        collisionsMap.get(base).add(target);
+    };
+    
+    for (let i = 0; i < objects.length; i++) {
+        const objectA = objects[i];
+        const aabbA = viewer.scene.getAABB(objectA);
+
+        if (!aabbA) {
+            continue;
+        }
+
+        for (let j = 0; j < externalObjects.length; j++) {
+            const objectB = externalObjects[j];
+            const aabbB = viewer.scene.getAABB(objectB);
+
+            if (aabbB && intersectsAABB(aabbA, aabbB)) {
+                addCollision(objectA, objectB);
+            }
+        }
+    }
+
+    const collisions = Array.from(collisionsMap.entries()).map(([objectId, set]) => ({
+        objectId,
+        collidingWith: Array.from(set)
+    }));
+
+    collisionSummary.textContent = `${collisions.length} objeto(s) do modelo ${modelId} com colisão em outros modelos.`;
+    renderCollisionResults(collisions);
+}
 function desativarMedicao() {
     const deactivateButton = document.getElementById("btnDeactivate");
     setMeasurementMode("none", deactivateButton);
@@ -788,7 +1062,7 @@ function setupModelIsolateController() {
 
     setupTreeViewFilter();
 
-    modelIsolateController = viewer.scene.objects;
+    modelIsolateController = viewer.scene;
 
     // Ouve o evento de "seleção" no TreeView
     treeView.on("nodeClicked", (event) => {
@@ -798,9 +1072,9 @@ function setupModelIsolateController() {
         if (entityId && viewer.scene.getObjectsInSubtree(entityId).length > 0) {
             
             const subtreeIds = viewer.scene.getObjectsInSubtree(entityId);
-            
+
             // Isola (mostra apenas) a parte do modelo (pavimento, por exemplo) clicada
-            modelIsolateController.setObjectsXRayed(modelIsolateController.getObjectsIds(), true); // X-ray em TUDO
+            modelIsolateController.setObjectsXRayed(getAllObjectIds(), true); // X-ray em TUDO
             modelIsolateController.setObjectsXRayed(subtreeIds, false); // Tira o X-ray do subconjunto isolado
 
             modelIsolateController.isolate(subtreeIds); // Isola o subconjunto
@@ -1345,34 +1619,3 @@ viewer.scene.canvas.canvas.addEventListener('contextmenu', (event) => {
     canvasElement.addEventListener('touchend', endTouch, { passive: false });
     canvasElement.addEventListener('touchcancel', clearTouch, { passive: true });
 })();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
