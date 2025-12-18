@@ -1,21 +1,21 @@
 // app.js
 
 import {
-    Viewer, 
-    LocaleService, 
-    XKTLoaderPlugin, 
-    AngleMeasurementsPlugin, 
-    AngleMeasurementsMouseControl, 
+    Viewer,
+    LocaleService,
+    XKTLoaderPlugin,
+    AngleMeasurementsPlugin,
+    AngleMeasurementsMouseControl,
     DistanceMeasurementsPlugin,
     DistanceMeasurementsMouseControl,
-    ContextMenu, 
+    ContextMenu,
     PointerLens,
-    NavCubePlugin, 
+    NavCubePlugin,
     TreeViewPlugin,
-    SectionPlanesPlugin,
-    LineSet,         // <--- NOVO: Importa LineSet
-    buildGridGeometry // <--- NOVO: Importa buildGridGeometry
-} from "https://cdn.jsdelivr.net/npm/@xeokit/xeokit-sdk@latest/dist/xeokit-sdk.min.es.js"; 
+    SectionPlanesPlugin
+} from "https://cdn.jsdelivr.net/npm/@xeokit/xeokit-sdk@latest/dist/xeokit-sdk.min.es.js";
+
+const { jsPDF } = window.jspdf;
 
 let treeView;
 let modelIsolateController;
@@ -24,6 +24,8 @@ let horizontalSectionPlane;
 let horizontalPlaneControl;
 let lastPickedEntity = null; // NOVO: Variável para rastrear a entidade selecionada
 let lastSelectedEntity = null; // NOVO: Guarda a entidade selecionada pelo duplo clique
+let lastCollisionResults = [];
+let lastCollisionModelId = null;
 
 // -----------------------------------------------------------------------------
 // 1. Configuração do Viewer e Redimensionamento (100% da tela)
@@ -278,6 +280,7 @@ const DEFAULT_MODEL_TRANSFORMS = {
     IFC_EMT_ESC: { position: [0.14, 0.35, -0.15], rotation: [0, 90, 0]  },
     IFC_EMT_COB: { position: [0.14, 0, -0.15], rotation: [0, 90, 0]  },
 };
+
 const transformPanel = document.getElementById("transformPanel");
 const transformPanelToggleButton = document.getElementById("btnTransformPanel");
 const closeTransformPanelButton = document.getElementById("closeTransformPanel");
@@ -293,12 +296,19 @@ const collisionPanelToggleButton = document.getElementById("btnCollisionPanel");
 const closeCollisionPanelButton = document.getElementById("closeCollisionPanel");
 const collisionModelASelect = document.getElementById("collisionModelA");
 const runCollisionCheckButton = document.getElementById("runCollisionCheck");
+const downloadCollisionPdfButton = document.getElementById("downloadCollisionPdf");
 const collisionSummary = document.getElementById("collisionSummary");
 const collisionResultsList = document.getElementById("collisionResults");
+const searchBar = document.getElementById("searchBar");
+const searchInput = document.getElementById("searchIdInput");
+const searchButton = document.getElementById("btnSearchId");
+const searchToggleButton = document.getElementById("btnSearchToggle");
+const searchFeedback = document.getElementById("searchFeedback");
 
 setupSAOControls();
 setupTransformPanelControls();
 setupCollisionPanelControls();
+setupSearchControls();
 /**
  * Reseta a visibilidade de todos os objetos e remove qualquer destaque ou raio-x.
  */
@@ -506,49 +516,170 @@ function setupCollisionPanelControls() {
         const modelId = collisionModelASelect?.value;
         findAndRenderCollisions(modelId);
     });
+
+    downloadCollisionPdfButton?.addEventListener("click", async () => {
+        const originalLabel = downloadCollisionPdfButton.textContent;
+        downloadCollisionPdfButton.disabled = true;
+        downloadCollisionPdfButton.textContent = "Gerando relatório...";
+
+        try {
+            await downloadCollisionsAsPdf();
+        } finally {
+            downloadCollisionPdfButton.textContent = originalLabel;
+            updateCollisionDownloadButton();
+        }
+    });
+
+    updateCollisionDownloadButton();
 }
 
-/**
- * Função NOVO: Cria uma grade no plano do solo (elevação mínima Y).
- */
-function createGroundGrid() {
-    // Pega o Bounding Box de toda a cena para centralizar e posicionar no solo
-    const aabb = viewer.scene.getAABB(); 
-    
-    // Determina a elevação do solo (o valor Y mínimo do AABB)
-    // O xeokit usa a convenção [minX, minY, minZ, maxX, maxY, maxZ]
-    const groundY = aabb[1]; 
+function setSearchStatus(message, isError = false) {
+    if (!searchFeedback) {
+        return;
+    }
 
-    // Cria a geometria da grade
-    const geometryArrays = buildGridGeometry({
-        size: 100, // Tamanho da grade (100x100 metros)
-        divisions: 50 // 50 divisões (linhas)
+    searchFeedback.textContent = message;
+    searchFeedback.dataset.state = isError ? "error" : "success";
+}
+
+function openSearchBar() {
+    if (!searchBar) {
+        return;
+    }
+
+    searchBar.hidden = false;
+
+    if (searchToggleButton) {
+        searchToggleButton.classList.add("active");
+        searchToggleButton.setAttribute("aria-pressed", "true");
+    }
+
+    if (searchInput) {
+        searchInput.focus();
+        searchInput.select?.();
+    }
+}
+
+function closeSearchBar() {
+    if (!searchBar) {
+        return;
+    }
+
+    searchBar.hidden = true;
+
+    if (searchToggleButton) {
+        searchToggleButton.classList.remove("active");
+        searchToggleButton.setAttribute("aria-pressed", "false");
+    }
+}
+
+function toggleSearchBar(forceOpen) {
+    if (!searchBar) {
+        return;
+    }
+
+    const shouldOpen = typeof forceOpen === "boolean" ? forceOpen : searchBar.hidden;
+
+    if (shouldOpen) {
+        openSearchBar();
+        return;
+    }
+
+    closeSearchBar();
+}
+
+function focusObjectById(objectId, { animate = true } = {}) {
+    if (!modelIsolateController || !objectId) {
+        return false;
+    }
+
+    const targetId = String(objectId).trim();
+    const allIds = getAllObjectIds();
+
+    if (!allIds.includes(targetId)) {
+        return false;
+    }
+
+    modelIsolateController.setObjectsVisible(allIds, true);
+    modelIsolateController.setObjectsHighlighted(allIds, false);
+
+    if (allIds.length) {
+        modelIsolateController.setObjectsXRayed(allIds, true);
+    }
+
+    modelIsolateController.setObjectsXRayed([targetId], false);
+    modelIsolateController.setObjectsHighlighted([targetId], true);
+
+    const entity = viewer.scene.objects?.[targetId];
+    if (entity) {
+        lastSelectedEntity = entity;
+    }
+
+    const aabb = viewer.scene.getAABB(targetId);
+    if (aabb) {
+        if (animate) {
+            viewer.cameraFlight.flyTo({ aabb, duration: 0.6 });
+        } else {
+            viewer.cameraFlight.jumpTo({ aabb });
+        }
+    }
+
+    requestRenderFrame();
+    return true;
+}
+
+function setupSearchControls() {
+    if (!searchInput || !searchButton) {
+        return;
+    }
+
+    if (searchToggleButton && searchBar) {
+        searchToggleButton.addEventListener("click", () => toggleSearchBar());
+    }
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && searchBar && !searchBar.hidden) {
+            toggleSearchBar(false);
+        }
     });
 
-    // Cria o LineSet para renderizar a grade
-    new LineSet(viewer.scene, {
-        positions: geometryArrays.positions,
-        indices: geometryArrays.indices,
-        color: [0.5, 0.5, 0.5], // Cor cinza suave
-        opacity: 0.8,
-        // Move a grade para o centro XZ do modelo e para a elevação correta.
-        position: [
-            (aabb[0] + aabb[3]) / 2, // Centro X
-            groundY,                 // Elevação Y
-            (aabb[2] + aabb[5]) / 2  // Centro Z
-        ]
+    const runSearch = () => {
+        const rawId = searchInput.value.trim();
+
+        if (!rawId) {
+            setSearchStatus("Digite um ID de peça para buscar.", true);
+            return;
+        }
+
+        if (!modelIsolateController || !getAllObjectIds().length) {
+            setSearchStatus("Carregue um modelo antes de buscar uma peça.", true);
+            return;
+        }
+
+        const found = focusObjectById(rawId);
+
+        if (found) {
+            setSearchStatus(`Peça ${rawId} isolada com destaque.`);
+        } else {
+            setSearchStatus(`Peça ${rawId} não encontrada nos modelos carregados.`, true);
+        }
+    };
+
+    searchButton.addEventListener("click", runSearch);
+    searchInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            runSearch();
+        }
     });
-    
-    console.log("Grade do solo criada.");
 }
 
 function finalizeInitialSetup() {
     setTimeout(() => {
         viewer.cameraFlight.jumpTo(viewer.scene);
         console.log("Todos os modelos carregados e câmera ajustada para o zoom correto.");
-        setMeasurementMode('none', document.getElementById('btnDeactivate'));
+        setMeasurementMode('none');
         setupModelIsolateController();
-        createGroundGrid();
     }, 300);
 }
 
@@ -850,26 +981,200 @@ function mergeAABBs(aabbs) {
     const maxX = Math.max(...valid.map((aabb) => aabb[3]));
     const maxY = Math.max(...valid.map((aabb) => aabb[4]));
     const maxZ = Math.max(...valid.map((aabb) => aabb[5]));
-
+    
     return [minX, minY, minZ, maxX, maxY, maxZ];
 }
 
-function isolateCollisionGroup(objectAId, collidingIds) {
-    if (!modelIsolateController) {
+function getCameraPose() {
+    const { eye, look, up } = viewer.camera || {};
+
+    if (!eye || !look || !up) {
+        return null;
+    }
+
+    return {
+        eye: [...eye],
+        look: [...look],
+        up: [...up]
+    };
+}
+
+function restoreCameraPose(pose) {
+    if (!pose) {
         return;
+    }
+
+    viewer.cameraFlight.jumpTo({
+        eye: pose.eye,
+        look: pose.look,
+        up: pose.up
+    });
+}
+
+function waitForRender(ms = 180) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function toArraySafe(list) {
+    if (!list) {
+        return [];
+    }
+
+    if (Array.isArray(list)) {
+        return [...list];
+    }
+
+    if (typeof list[Symbol.iterator] === "function") {
+        return [...list];
+    }
+
+    return [];
+}
+
+function captureSceneRenderState() {
+    const scene = viewer?.scene;
+
+    if (!scene) {
+        return null;
+    }
+
+    return {
+        visible: toArraySafe(scene.visibleObjectIds),
+        xrayed: toArraySafe(scene.xrayedObjectIds),
+        highlighted: toArraySafe(scene.highlightedObjectIds)
+    };
+}
+
+function restoreSceneRenderState(state) {
+    const scene = viewer?.scene;
+
+    if (!scene || !state) {
+        return;
+    }
+
+    const applyState = (current, target, setter) => {
+        if (!setter) {
+            return;
+        }
+
+        const currentIds = toArraySafe(current);
+        const targetIds = toArraySafe(target);
+        const unionIds = [...new Set([...currentIds, ...targetIds])];
+
+        if (unionIds.length) {
+            setter(unionIds, false);
+        }
+
+        if (targetIds.length) {
+            setter(targetIds, true);
+        }
+    };
+
+    applyState(scene.visibleObjectIds, state.visible, scene.setObjectsVisible?.bind(scene));
+    applyState(scene.xrayedObjectIds, state.xrayed, scene.setObjectsXRayed?.bind(scene));
+    applyState(scene.highlightedObjectIds, state.highlighted, scene.setObjectsHighlighted?.bind(scene));
+}
+
+/**
+ * Snapshot LEVE:
+ * - Faz downscale para reduzir pixels
+ * - Exporta como JPEG com qualidade ajustável
+ * - Mantém a imagem grande no PDF (em mm), mas leve (em px)
+ */
+function getCanvasSnapshot({
+    maxWidthPx = 900,          // ↓ quanto menor, mais leve (700~1200 bom)
+    mimeType = "image/jpeg",   // JPEG é muito mais leve que PNG
+    quality = 0.55             // 0.35~0.70 (quanto menor, mais leve)
+} = {}) {
+    const canvas = document.getElementById("meuCanvas");
+    if (!canvas) return null;
+
+    const srcCanvas = canvas;
+    const srcW = srcCanvas.width;
+    const srcH = srcCanvas.height;
+
+    if (!srcW || !srcH) return null;
+
+    // Escala para reduzir resolução
+    const scale = Math.min(1, maxWidthPx / srcW);
+    const dstW = Math.max(1, Math.round(srcW * scale));
+    const dstH = Math.max(1, Math.round(srcH * scale));
+
+    // Canvas temporário reduzido
+    const tmp = document.createElement("canvas");
+    tmp.width = dstW;
+    tmp.height = dstH;
+
+    const ctx = tmp.getContext("2d", { alpha: false });
+
+    // Melhora a aparência ao reduzir
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+
+    ctx.drawImage(srcCanvas, 0, 0, dstW, dstH);
+
+    // Exporta como JPEG comprimido
+    return tmp.toDataURL(mimeType, quality);
+}
+
+async function captureSnapshotsForCollisions(collisions) {
+    const originalPose = getCameraPose();
+    const originalRenderState = captureSceneRenderState();
+    const canvas = document.getElementById("meuCanvas");
+    const canvasAspect =
+        canvas?.width && canvas?.height ? canvas.width / canvas.height : 1.6;
+
+    const snapshots = [];
+
+    for (const { objectId, collidingWith } of collisions) {
+        const isolationApplied = applyCollisionIsolation(objectId, collidingWith, { animate: false });
+
+        if (!isolationApplied) {
+            snapshots.push({ dataUrl: null, aspect: canvasAspect });
+            continue;
+        }
+
+        requestRenderFrame();
+        await waitForRender(220); // um pouco maior pra garantir render antes do print
+
+        snapshots.push({
+            dataUrl: getCanvasSnapshot({
+                maxWidthPx: 900,          // ajuste aqui (700 = mais leve, 1200 = mais qualidade)
+                mimeType: "image/jpeg",
+                quality: 0.55             // ajuste aqui (0.45 = mais leve, 0.65 = melhor)
+            }),
+            aspect: canvasAspect
+        });
+    }
+
+    if (originalRenderState) {
+        restoreSceneRenderState(originalRenderState);
+        requestRenderFrame();
+    }
+
+    if (originalPose) {
+        restoreCameraPose(originalPose);
+        requestRenderFrame();
+    }
+
+    return snapshots;
+}
+
+function applyCollisionIsolation(objectAId, collidingIds, { animate = true } = {}) {
+    if (!modelIsolateController) {
+        return false;
     }
 
     const idsToFocus = [objectAId, ...collidingIds];
     const allIds = getAllObjectIds();
     const otherIds = allIds.filter((id) => !idsToFocus.includes(id));
-
     // Limpa estados anteriores e mostra tudo em X-ray para manter o contexto
     modelIsolateController.setObjectsVisible(allIds, true);
     modelIsolateController.setObjectsXRayed(allIds, true);
     modelIsolateController.setObjectsHighlighted(allIds, false);
 
     // Realça a colisão e remove o X-ray apenas dos elementos em conflito
-    modelIsolateController.setObjectsVisible(idsToFocus, true);
+modelIsolateController.setObjectsVisible(idsToFocus, true);
     modelIsolateController.setObjectsXRayed(idsToFocus, false);
     viewer.scene.setObjectsHighlighted(idsToFocus, true);
 
@@ -880,10 +1185,185 @@ function isolateCollisionGroup(objectAId, collidingIds) {
     const combinedAABB = mergeAABBs(idsToFocus.map((id) => viewer.scene.getAABB(id)));
 
     if (combinedAABB) {
-        viewer.cameraFlight.flyTo({ aabb: combinedAABB, duration: 0.6 });
+        if (animate) {
+            viewer.cameraFlight.flyTo({ aabb: combinedAABB, duration: 0.6 });
+        } else {
+            viewer.cameraFlight.jumpTo({ aabb: combinedAABB });
+        }
     }
 
     requestRenderFrame();
+
+    return Boolean(combinedAABB);
+}
+
+function isolateCollisionGroup(objectAId, collidingIds) {
+    applyCollisionIsolation(objectAId, collidingIds, { animate: true });
+}
+
+function updateCollisionDownloadButton() {
+    if (!downloadCollisionPdfButton) {
+        return;
+    }
+
+    const hasCollisions = lastCollisionResults.length > 0;
+    downloadCollisionPdfButton.disabled = !hasCollisions;
+    downloadCollisionPdfButton.title = hasCollisions
+        ? "Baixar relatório em PDF"
+        : "Nenhuma colisão encontrada para exportar";
+}
+
+function setCollisionState(collisions, modelId) {
+    lastCollisionResults = collisions;
+    lastCollisionModelId = collisions.length ? modelId : null;
+    updateCollisionDownloadButton();
+}
+
+function formatIfcPropertyValue(value) {
+    if (value === null || value === undefined) {
+        return "(vazio)";
+    }
+
+    if (typeof value === "object") {
+        try {
+            return JSON.stringify(value);
+        } catch (e) {
+            return String(value);
+        }
+    }
+
+    return String(value);
+}
+
+function buildIfcPropertiesLines(doc, objectId, maxWidth) {
+    const metaObject = viewer.metaScene?.metaObjects?.[objectId];
+    if (!metaObject) {
+        return ["Propriedades IFC: metadados não encontrados para este objeto."];
+    }
+
+    const { propertySets } = metaObject;
+    if (!propertySets?.length) {
+        return ["Propriedades IFC: nenhum conjunto de propriedades disponível."];
+    }
+
+    const lines = ["Propriedades IFC:"];
+
+    propertySets.forEach((pset) => {
+        const setName = pset.name || pset.id || "Conjunto sem nome";
+        lines.push(`- ${setName}`);
+
+        if (pset.properties?.length) {
+            pset.properties.forEach((prop) => {
+                const key = prop.name || prop.id || "Propriedade";
+                const value = formatIfcPropertyValue(prop.value);
+                const propertyText = `  • ${key}: ${value}`;
+                const wrappedLines = doc.splitTextToSize(propertyText, maxWidth);
+                lines.push(...wrappedLines);
+            });
+        } else {
+            lines.push("  • Nenhuma propriedade listada.");
+        }
+    });
+
+    return lines;
+}
+
+async function downloadCollisionsAsPdf() {
+    
+    if (!lastCollisionResults.length) {
+        return;
+    }
+
+    // ✅ compressão do PDF
+    const doc = new jsPDF({ unit: "mm", format: "a4", compress: true });
+
+    const snapshots = await captureSnapshotsForCollisions(lastCollisionResults);
+
+    doc.setFontSize(16);
+    doc.text("Relatório de colisões", 14, 20);
+
+    doc.setFontSize(12);
+    doc.text(`Modelo analisado: ${lastCollisionModelId ?? "-"}`, 14, 30);
+    doc.text(`Total de colisões: ${lastCollisionResults.length}`, 14, 38);
+
+    let cursorY = 50;
+
+    const leftMargin = 14;
+    const topMargin = 20;
+    const maxWidth = 180;
+    const lineHeight = 5;
+    const spacingAfterItem = 6;
+
+    // Altura útil aproximada no A4 (em mm)
+    const pageHeightLimit = 280;
+
+    // ✅ imagem MAIOR no PDF (mm) sem aumentar o peso (px)
+    const defaultImageWidth = 140; // 120~160 fica ótimo
+
+    lastCollisionResults.forEach(({ objectId, collidingWith }, index) => {
+        const titleText = `${index + 1}. Objeto ${objectId}`;
+        const description = `Colide com: ${collidingWith.join(", ")}`;
+        const snapshot = snapshots[index];
+
+        const imageAspect = snapshot?.aspect || 1.6;
+        const imageHeight = snapshot?.dataUrl ? defaultImageWidth / imageAspect : 0;
+
+        const descriptionLines = doc.splitTextToSize(description, maxWidth);
+        const propertyLines = buildIfcPropertiesLines(doc, objectId, maxWidth);
+
+        const itemHeight =
+            lineHeight +
+            descriptionLines.length * lineHeight +
+            propertyLines.length * lineHeight +
+            (snapshot?.dataUrl && propertyLines.length ? spacingAfterItem : 0) +
+            (snapshot?.dataUrl ? imageHeight : 0) +
+            spacingAfterItem;
+
+        // Quebra de página
+        if (cursorY + itemHeight > pageHeightLimit) {
+            doc.addPage();
+            cursorY = topMargin;
+
+            // opcional: repetir cabeçalho (se quiser, descomente)
+            // doc.setFontSize(10);
+            // doc.text(`Relatório de colisões - Modelo: ${lastCollisionModelId ?? "-"}`, leftMargin, 12);
+        }
+        doc.setFontSize(12);
+        doc.text(titleText, leftMargin, cursorY);
+        cursorY += lineHeight;
+
+        doc.setFontSize(10);
+        doc.text(descriptionLines, leftMargin, cursorY, { maxWidth });
+        cursorY += descriptionLines.length * lineHeight;
+
+        if (propertyLines.length) {
+            doc.text(propertyLines, leftMargin, cursorY, { maxWidth });
+            cursorY += propertyLines.length * lineHeight;
+
+            if (snapshot?.dataUrl) {
+                cursorY += spacingAfterItem;
+            }
+        }
+
+        if (snapshot?.dataUrl) {
+            // ✅ JPEG + FAST (mais leve e rápido)
+            doc.addImage(
+                snapshot.dataUrl,
+                "JPEG",
+                leftMargin,
+                cursorY,
+                defaultImageWidth,
+                imageHeight,
+                undefined,
+                "FAST"
+            );
+            cursorY += imageHeight;
+        }
+
+        cursorY += spacingAfterItem;
+    });
+
+    doc.save("colisoes.pdf");
 }
 
 function renderCollisionResults(collisions) {
@@ -928,6 +1408,7 @@ function findAndRenderCollisions(modelId) {
     if (!modelId) {
         collisionSummary.textContent = "Selecione um modelo para iniciar a análise.";
         collisionResultsList.innerHTML = "";
+        setCollisionState([], null);
         return;
     }
 
@@ -938,12 +1419,14 @@ function findAndRenderCollisions(modelId) {
     if (!objects.length) {
         collisionSummary.textContent = "Nenhum objeto encontrado no modelo selecionado.";
         collisionResultsList.innerHTML = "";
+        setCollisionState([], null);
         return;
     }
 
     if (!externalObjects.length) {
         collisionSummary.textContent = "Nenhum outro modelo carregado para comparar colisões.";
         collisionResultsList.innerHTML = "";
+        setCollisionState([], null);
         return;
     }
 
@@ -980,12 +1463,8 @@ function findAndRenderCollisions(modelId) {
     }));
 
     collisionSummary.textContent = `${collisions.length} objeto(s) do modelo ${modelId} com colisão em outros modelos.`;
+    setCollisionState(collisions, modelId);
     renderCollisionResults(collisions);
-}
-function desativarMedicao() {
-    const deactivateButton = document.getElementById("btnDeactivate");
-    setMeasurementMode("none", deactivateButton);
-    closePropertyPanel();
 }
 
 document.addEventListener("keydown", (event) => {
@@ -998,10 +1477,11 @@ document.addEventListener("keydown", (event) => {
     }
 
     if (key === "escape") {
-        desativarMedicao();
+        setMeasurementMode("none");
+        closePropertyPanel();
         return;
     }
-    
+
     if (key === "r") {
         resetXRay();
         return;
@@ -1025,8 +1505,6 @@ document.addEventListener("keydown", (event) => {
         hideEntity(lastSelectedEntity);
     }
 });
-
-window.desativar = desativarMedicao;
 
 // -----------------------------------------------------------------------------
 // 4. Menu de Contexto (Deletar Medição) (MANTIDO)
@@ -1225,47 +1703,6 @@ function toggleTreeView() {
 // EXPOR AO ESCOPO GLOBAL para ser chamado pelo 'onclick' do HTML
 window.toggleTreeView = toggleTreeView;
 window.resetModelVisibility = resetModelVisibility;
-
-// -----------------------------------------------------------------------------
-// 6.2 Função de Grade (Grid do Solo com Ligar/Desligar)
-// -----------------------------------------------------------------------------
-let gradeAtiva = null;
-
-/**
- * Cria uma grade se não existir, ou alterna sua visibilidade.
- */
-function toggleGrid() {
-    const aabb = viewer.scene.getAABB();
-
-    if (!gradeAtiva) {
-        const groundY = aabb[1];
-        const geometryArrays = buildGridGeometry({
-            size: 200,
-            divisions: 50
-        });
-
-        gradeAtiva = new LineSet(viewer.scene, {
-            positions: geometryArrays.positions,
-            indices: geometryArrays.indices,
-            color: [0.5, 0.5, 0.5],
-            opacity: 0.8,
-            position: [
-                (aabb[0] + aabb[3]) / 2,
-                groundY,
-                (aabb[2] + aabb[5]) / 2
-            ],
-            visible: true
-        });
-
-        console.log("🟩 Grade criada e ativada.");
-    } else {
-        gradeAtiva.visible = !gradeAtiva.visible;
-        console.log(gradeAtiva.visible ? "🟩 Grade ativada" : "⬜ Grade desativada");
-    }
-}
-
-// Exportar para escopo global (para o botão no HTML)
-window.toggleGrid = toggleGrid;
 
 // -----------------------------------------------------------------------------
 // 7. Plano de Corte (Section Plane) - VERSÃO ESTÁVEL (MANTIDO)
@@ -1538,7 +1975,6 @@ function showMaterialProperties(entity) {
     document.getElementById("closePropertyPanel").onclick = closePropertyPanel;
 }
 
-
 // Cria o menu de contexto
 const materialContextMenu = new ContextMenu({
     enabled: true,
@@ -1696,7 +2132,3 @@ viewer.scene.canvas.canvas.addEventListener('contextmenu', (event) => {
     canvasElement.addEventListener('touchend', endTouch, { passive: false });
     canvasElement.addEventListener('touchcancel', clearTouch, { passive: true });
 })();
-
-
-
-
