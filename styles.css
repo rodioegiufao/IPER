@@ -432,7 +432,7 @@ html, body {
 /* Painel de ajustes de Scalable Ambient Obscurance */
 /* ---------------------------------------------------- */
 
-#saoPanel {
+#helpPanel {
     position: fixed;
     top: 80px;
     right: 20px;
@@ -448,7 +448,7 @@ html, body {
     backdrop-filter: blur(2px);
 }
 
-.sao-panel-header {
+.help-panel-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -456,17 +456,17 @@ html, body {
     margin-bottom: 10px;
 }
 
-.sao-panel-title {
+.help-panel-title {
     font-size: 16px;
     font-weight: 700;
 }
 
-.sao-panel-subtitle {
+.help-panel-subtitle {
     color: #cfd8dc;
     font-size: 12px;
 }
 
-#closeSaoPanel {
+#closeHelpPanel {
     background: transparent;
     border: none;
     color: #f0f0f0;
@@ -477,33 +477,51 @@ html, body {
     transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-#closeSaoPanel:hover {
+#closeHelpPanel:hover {
     background-color: rgba(255, 255, 255, 0.05);
     color: #ff6b6b;
 }
 
-.sao-control {
+.help-section {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin-bottom: 12px;
+    gap: 8px;
+    margin-bottom: 14px;
     font-size: 13px;
 }
 
-.sao-control input[type="range"] {
-    width: 100%;
-    accent-color: #4caf50;
+.help-section h4 {
+    margin: 0;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: #cfd8dc;
 }
 
-.sao-control input[type="checkbox"] {
-    transform: scale(1.1);
-    accent-color: #4caf50;
+.help-list {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 6px;
 }
 
-.sao-value {
-    color: #4caf50;
-    font-weight: 700;
-    margin-left: 6px;
+.help-list li {
+    line-height: 1.4;
+}
+
+.help-list kbd {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 12px;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.help-note {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: #cfd8dc;
 }
 
 /* ---------------------------------------------------- */
@@ -836,8 +854,3 @@ html, body {
     background: #1b95ff;
     transform: translateY(-1px);
 }
-
-
-
-
-
