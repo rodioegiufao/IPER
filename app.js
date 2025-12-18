@@ -63,143 +63,35 @@ highlightMaterial.color = [0, 0, 0];
 highlightMaterial.edgeColor = [0, 0, 0];
 
 /**
- * Configura o painel de ajustes do Scalable Ambient Obscurance (SAO).
+ * Configura o painel de ajuda e atalhos de teclado.
  */
-function setupSAOControls() {
-    const saoPanel = document.getElementById("saoPanel");
-    const toggleButton = document.getElementById("btnSAO");
-    const closeButton = document.getElementById("closeSaoPanel");
+function setupHelpPanel() {
+    const helpPanel = document.getElementById("helpPanel");
+    const toggleButton = document.getElementById("btnHelp");
+    const closeButton = document.getElementById("closeHelpPanel");
 
-    if (!saoPanel || !toggleButton || !closeButton) {
+    if (!helpPanel || !toggleButton || !closeButton) {
         return;
     }
-
-    const sao = viewer.scene.sao;
-
-    if (!sao) {
-        return;
-    }
-
-    const requestSaoRender = () => {
-        if (viewer.scene.requestRender) {
-            viewer.scene.requestRender();
-        } else if (viewer.scene.setDirty) {
-            viewer.scene.setDirty();
-        }
-    };
-    const controls = {
-        enabled: document.getElementById("saoEnabled"),
-        blur: document.getElementById("saoBlur"),
-        intensity: document.getElementById("saoIntensity"),
-        kernelRadius: document.getElementById("saoKernelRadius"),
-        bias: document.getElementById("saoBias"),
-        scale: document.getElementById("saoScale"),
-        minResolution: document.getElementById("saoMinResolution"),
-        numSamples: document.getElementById("saoNumSamples"),
-        blendCutoff: document.getElementById("saoBlendCutoff"),
-        blendFactor: document.getElementById("saoBlendFactor")
-    };
-
-    const valueLabels = {
-        intensity: document.getElementById("saoIntensityValue"),
-        kernelRadius: document.getElementById("saoKernelRadiusValue"),
-        bias: document.getElementById("saoBiasValue"),
-        scale: document.getElementById("saoScaleValue"),
-        minResolution: document.getElementById("saoMinResolutionValue"),
-        numSamples: document.getElementById("saoNumSamplesValue"),
-        blendCutoff: document.getElementById("saoBlendCutoffValue"),
-        blendFactor: document.getElementById("saoBlendFactorValue")
-    };
-
-    const setLabel = (label, value, decimals = 2) => {
-        if (!label) return;
-        label.textContent = decimals === null ? value : Number(value).toFixed(decimals);
-    };
-
-    const syncFromSao = () => {
-        controls.enabled.checked = !!sao.enabled;
-        controls.blur.checked = !!sao.blur;
-
-        controls.intensity.value = sao.intensity;
-        controls.kernelRadius.value = sao.kernelRadius;
-        controls.bias.value = sao.bias;
-        controls.scale.value = sao.scale;
-        controls.minResolution.value = sao.minResolution;
-        controls.numSamples.value = sao.numSamples;
-        controls.blendCutoff.value = sao.blendCutoff;
-        controls.blendFactor.value = sao.blendFactor;
-
-        setLabel(valueLabels.intensity, sao.intensity);
-        setLabel(valueLabels.kernelRadius, sao.kernelRadius, 0);
-        setLabel(valueLabels.bias, sao.bias);
-        setLabel(valueLabels.scale, sao.scale);
-        setLabel(valueLabels.minResolution, sao.minResolution);
-        setLabel(valueLabels.numSamples, sao.numSamples, null);
-        setLabel(valueLabels.blendCutoff, sao.blendCutoff);
-        setLabel(valueLabels.blendFactor, sao.blendFactor);
-    };
-
-    const bindRange = (input, prop, decimals = 2, round = false) => {
-        if (!input) return;
-        input.addEventListener("input", () => {
-            let value = parseFloat(input.value);
-            if (round) {
-                value = Math.round(value);
-            }
-            sao[prop] = value;
-            const label = valueLabels[prop];
-            setLabel(label, value, round ? null : decimals);
-            requestSaoRender();
-        });
-    };
-
-    if (controls.enabled) {
-        controls.enabled.addEventListener("change", () => {
-            sao.enabled = controls.enabled.checked;
-            requestSaoRender();
-        });
-    }
-
-    if (controls.blur) {
-        controls.blur.addEventListener("change", () => {
-            sao.blur = controls.blur.checked;
-            requestSaoRender();
-        });
-    }
-    
-    bindRange(controls.intensity, "intensity");
-    bindRange(controls.kernelRadius, "kernelRadius", 0, true);
-    bindRange(controls.bias, "bias");
-    bindRange(controls.scale, "scale");
-    bindRange(controls.minResolution, "minResolution");
-    bindRange(controls.numSamples, "numSamples", null, true);
-    bindRange(controls.blendCutoff, "blendCutoff");
-    bindRange(controls.blendFactor, "blendFactor");
 
     const togglePanel = (forceState) => {
-        const shouldOpen = typeof forceState === "boolean" ? forceState : saoPanel.hidden;
-        saoPanel.hidden = !shouldOpen;
+        const shouldOpen = typeof forceState === "boolean" ? forceState : helpPanel.hidden;
+        helpPanel.hidden = !shouldOpen;
         toggleButton.classList.toggle("active", shouldOpen);
-        if (shouldOpen) {
-            syncFromSao();
-        }
+        toggleButton.setAttribute("aria-pressed", shouldOpen ? "true" : "false");
     };
 
     toggleButton.addEventListener("click", () => togglePanel());
     closeButton.addEventListener("click", () => togglePanel(false));
 
     document.addEventListener("click", (event) => {
-        const isClickInsidePanel = saoPanel.contains(event.target);
+        const isClickInsidePanel = helpPanel.contains(event.target);
         const isToggle = toggleButton.contains(event.target);
-        if (!saoPanel.hidden && !isClickInsidePanel && !isToggle) {
+        if (!helpPanel.hidden && !isClickInsidePanel && !isToggle) {
             togglePanel(false);
         }
     });
-
-    syncFromSao();
-    window.toggleSAOSettings = togglePanel;
 }
-
 function setupTransformPanelControls() {
     if (!transformPanel || !transformPanelToggleButton || !closeTransformPanelButton) {
         return;
@@ -305,7 +197,7 @@ const searchButton = document.getElementById("btnSearchId");
 const searchToggleButton = document.getElementById("btnSearchToggle");
 const searchFeedback = document.getElementById("searchFeedback");
 
-setupSAOControls();
+setupHelpPanel();
 setupTransformPanelControls();
 setupCollisionPanelControls();
 setupSearchControls();
