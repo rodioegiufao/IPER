@@ -66,27 +66,23 @@ highlightMaterial.edgeColor = [0, 0, 0];
  * Configura o painel de ajuda e atalhos de teclado.
  */
 function setupHelpPanel() {
-    const helpPanel = document.getElementById("helpPanel");
-    const toggleButton = document.getElementById("btnHelp");
-    const closeButton = document.getElementById("closeHelpPanel");
-
-    if (!helpPanel || !toggleButton || !closeButton) {
+    if (!helpPanel || !helpPanelToggleButton || !closeHelpPanelButton) {
         return;
     }
 
     const togglePanel = (forceState) => {
         const shouldOpen = typeof forceState === "boolean" ? forceState : helpPanel.hidden;
         helpPanel.hidden = !shouldOpen;
-        toggleButton.classList.toggle("active", shouldOpen);
-        toggleButton.setAttribute("aria-pressed", shouldOpen ? "true" : "false");
+        helpPanelToggleButton.classList.toggle("active", shouldOpen);
+        helpPanelToggleButton.setAttribute("aria-pressed", shouldOpen ? "true" : "false");
     };
 
-    toggleButton.addEventListener("click", () => togglePanel());
-    closeButton.addEventListener("click", () => togglePanel(false));
+    helpPanelToggleButton.addEventListener("click", () => togglePanel());
+    closeHelpPanelButton.addEventListener("click", () => togglePanel(false));
 
     document.addEventListener("click", (event) => {
         const isClickInsidePanel = helpPanel.contains(event.target);
-        const isToggle = toggleButton.contains(event.target);
+        const isToggle = helpPanelToggleButton.contains(event.target);
         if (!helpPanel.hidden && !isClickInsidePanel && !isToggle) {
             togglePanel(false);
         }
@@ -173,6 +169,10 @@ const DEFAULT_MODEL_TRANSFORMS = {
     IFC_EMT_COB: { position: [0.14, 0, -0.15], rotation: [0, 90, 0]  },
 };
 
+const helpPanel = document.getElementById("helpPanel");
+const helpPanelToggleButton = document.getElementById("btnHelp");
+const closeHelpPanelButton = document.getElementById("closeHelpPanel");
+const treeViewContainer = document.getElementById("treeViewContainer");
 const transformPanel = document.getElementById("transformPanel");
 const transformPanelToggleButton = document.getElementById("btnTransformPanel");
 const closeTransformPanelButton = document.getElementById("closeTransformPanel");
@@ -423,6 +423,48 @@ function setupCollisionPanelControls() {
     });
 
     updateCollisionDownloadButton();
+}
+
+function hidePanelElement(panelElement, toggleButton) {
+    if (!panelElement) {
+        return;
+    }
+
+    if (typeof panelElement.hidden === "boolean") {
+        panelElement.hidden = true;
+    }
+
+    toggleButton?.classList.remove("active");
+    toggleButton?.setAttribute("aria-pressed", "false");
+}
+
+function hideHelpPanel() {
+    hidePanelElement(helpPanel, helpPanelToggleButton);
+}
+
+function hideTransformPanel() {
+    hidePanelElement(transformPanel, transformPanelToggleButton);
+}
+
+function hideCollisionPanel() {
+    hidePanelElement(collisionPanel, collisionPanelToggleButton);
+}
+
+function hideTreeViewPanel() {
+    if (!treeViewContainer || treeViewContainer.style.display === "none") {
+        return;
+    }
+
+    treeViewContainer.style.display = "none";
+    resetModelVisibility();
+}
+
+function closePanelsOnEscape() {
+    hideHelpPanel();
+    hideTransformPanel();
+    hideCollisionPanel();
+    hideTreeViewPanel();
+    closeSearchBar();
 }
 
 function setSearchStatus(message, isError = false) {
@@ -1364,13 +1406,14 @@ document.addEventListener("keydown", (event) => {
 
     // Evita atalhos quando o usuário está digitando em inputs ou textareas
     const isTyping = ["INPUT", "TEXTAREA"].includes(event.target?.nodeName) || event.target?.isContentEditable;
-    if (isTyping) {
+    if (isTyping && key !== "escape") {
         return;
     }
 
     if (key === "escape") {
         setMeasurementMode("none");
         closePropertyPanel();
+        closePanelsOnEscape();
         return;
     }
 
@@ -1457,8 +1500,12 @@ new NavCubePlugin(viewer, {
 
 function setupModelIsolateController() {
 
+    if (!treeViewContainer) {
+        return;
+    }
+
     treeView = new TreeViewPlugin(viewer, {
-        containerElement: document.getElementById("treeViewContainer"),
+        containerElement: treeViewContainer,
         hierarchy: "containment",
         autoExpandDepth: 2
     });
@@ -1498,7 +1545,7 @@ function setupModelIsolateController() {
 }
 
 function setupTreeViewFilter() {
-    const container = document.getElementById("treeViewContainer");
+    const container = treeViewContainer;
 
     if (!container) {
         return;
@@ -1581,14 +1628,16 @@ function setupTreeViewFilter() {
  * Alterna a visibilidade do contêiner do TreeView e reseta a visibilidade do modelo se estiver fechando.
  */
 function toggleTreeView() {
-    const container = document.getElementById('treeViewContainer');
-    
-    if (container.style.display === 'block') {
-        container.style.display = 'none';
+    if (!treeViewContainer) {
+        return;
+    }
+
+    if (treeViewContainer.style.display === 'block') {
+        treeViewContainer.style.display = 'none';
         // Ação de "Mostrar Tudo" ao fechar o painel
         resetModelVisibility(); 
     } else {
-        container.style.display = 'block';
+        treeViewContainer.style.display = 'block';
     }
 }
 
