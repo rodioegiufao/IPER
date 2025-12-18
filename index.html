@@ -34,17 +34,7 @@
             <span style="font-size: 1.2em;">📏</span>
             Distância
         </button>
-
-        <button 
-            id="btnDeactivate" 
-            class="tool-button" 
-            onclick="setMeasurementMode('none', this)" 
-            title="Desativar Medição"
-        >
-            <span style="font-size: 1.2em;">🚫</span>
-            Desativar
-        </button>
-        
+     
         <button 
              id="btnToggleTree"
             class="tool-button"
@@ -55,16 +45,6 @@
             Pavimentos
         </button>
 
-        <button
-            id="btnGrid"
-            class="tool-button"
-            onclick="toggleGrid()"
-            title="Mostrar/Esconder Grade no Solo"
-        >
-            <span style="font-size: 1.2em;">🟩</span>
-            Grade
-        </button>
-        
         <button
             id="btnSectionPlane"
             class="tool-button"
@@ -99,6 +79,21 @@
             <span style="font-size: 1.2em;">🧊</span>
             Colisões
         </button>
+        <button
+            id="btnSearchToggle"
+            class="tool-button"
+            title="Mostrar/Esconder busca por ID"
+            aria-pressed="false"
+        >
+            <span style="font-size: 1.2em;">🔍</span>
+            Buscar
+        </button>
+    </div>
+    <div id="searchBar" class="search-bar" aria-label="Buscar peça por ID" hidden>
+        <label class="sr-only" for="searchIdInput">ID da peça</label>
+        <input id="searchIdInput" type="text" placeholder="Buscar peça pelo ID" aria-label="ID da peça" />
+        <button id="btnSearchId" type="button">Buscar</button>
+        <span id="searchFeedback" class="search-feedback" aria-live="polite"></span>
     </div>
     <button id="mobileToolbarToggle" type="button" aria-label="Mostrar todas as ferramentas" title="Mostrar todas as ferramentas" hidden>
         ☰ Mais ferramentas
@@ -177,6 +172,7 @@
 
         <div class="collision-actions">
             <button type="button" id="runCollisionCheck">Procurar colisões</button>
+            <button type="button" id="downloadCollisionPdf" disabled>Baixar PDF das colisões</button>
         </div>
 
         <p id="collisionSummary" class="collision-summary">Carregue um modelo para iniciar a análise.</p>
@@ -230,6 +226,7 @@
     <div id="creditNote" role="note" aria-label="Responsável pelo programa">
         Responsável pelo programa: Rodrigo Damasceno Nascimento
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script type="module" src="app.js"></script>
     <script>
         const modeStylesheet = document.getElementById('modeStylesheet');
