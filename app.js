@@ -21,6 +21,7 @@ let treeView;
 let modelIsolateController;
 let sectionPlanesPlugin;
 let horizontalSectionPlane;
+let sectionPlaneEnabled = false;
 let horizontalPlaneControl;
 let lastPickedEntity = null; // NOVO: Variável para rastrear a entidade selecionada
 let lastSelectedEntity = null; // NOVO: Guarda a entidade selecionada pelo duplo clique
@@ -1653,37 +1654,33 @@ window.resetModelVisibility = resetModelVisibility;
 function toggleSectionPlane(button) {
     const scene = viewer.scene;
 
-    // cria o plugin e o plano na primeira vez
-    if (!horizontalSectionPlane) {
+    if (!sectionPlanesPlugin) {
         sectionPlanesPlugin = new SectionPlanesPlugin(viewer);
-
-        const aabb = scene.getAABB();
-        const modelCenterY = (aabb[1] + aabb[4]) / 2;
-
-        horizontalSectionPlane = sectionPlanesPlugin.createSectionPlane({
-            id: "horizontalPlane",
-            pos: [0, modelCenterY, 0],
-            dir: [0, -1, 0],
-            active: false
-        });
-
-        console.log("Plano de corte criado sob demanda.");
     }
 
     // --- DESATIVAR ---
-    if (horizontalSectionPlane.active) {
-        horizontalSectionPlane.active = false;
-        scene.sectionPlanes.active = false;
+    if (sectionPlaneEnabled) {
+        sectionPlaneEnabled = false;
 
-        // destrói o controle, remove listeners e força redraw
-        if (horizontalSectionPlane.control) {
-            try {
-                viewer.input.removeCanvasElement(horizontalSectionPlane.control.canvas);
-            } catch (e) {}
-            horizontalSectionPlane.control.destroy();
-            horizontalSectionPlane.control = null;
+        if (horizontalSectionPlane) {
+            horizontalSectionPlane.active = false;
+
+            if (horizontalSectionPlane.control) {
+                try {
+                    viewer.input.removeCanvasElement(horizontalSectionPlane.control.canvas);
+                } catch (e) {}
+
+                horizontalSectionPlane.control.destroy();
+                horizontalSectionPlane.control = null;
+            }
+
+            // Remove o plano para que o gizmo e a geometria desapareçam
+            horizontalSectionPlane.destroy();
+            horizontalSectionPlane = null;
         }
 
+        scene.sectionPlanes.active = false;
+        
         // alguns builds deixam o gizmo em viewer.input._activeCanvasElements
         if (viewer.input && viewer.input._activeCanvasElements) {
             viewer.input._activeCanvasElements.clear?.();
@@ -1699,12 +1696,31 @@ function toggleSectionPlane(button) {
     const aabb = scene.getAABB();
     const modelCenterY = (aabb[1] + aabb[4]) / 2;
 
-    horizontalSectionPlane.pos = [0, modelCenterY, 0];
-    horizontalSectionPlane.dir = [0, -1, 0];
-    horizontalSectionPlane.active = true;
-    scene.sectionPlanes.active = true;
+    if (!horizontalSectionPlane) {
+        horizontalSectionPlane = sectionPlanesPlugin.createSectionPlane({
+            id: "horizontalPlane",
+            pos: [0, modelCenterY, 0],
+            dir: [0, -1, 0],
+            active: true
+        });
+    } else {
+        horizontalSectionPlane.pos = [0, modelCenterY, 0];
+        horizontalSectionPlane.dir = [0, -1, 0];
+        horizontalSectionPlane.active = true;
+    }
 
-    // cria novamente o controle
+    scene.sectionPlanes.active = true;
+    sectionPlaneEnabled = true;
+
+    if (horizontalSectionPlane.control) {
+        try {
+            viewer.input.removeCanvasElement(horizontalSectionPlane.control.canvas);
+        } catch (e) {}
+
+        horizontalSectionPlane.control.destroy();
+        horizontalSectionPlane.control = null;
+    }
+
     horizontalSectionPlane.control = sectionPlanesPlugin.showControl(horizontalSectionPlane.id);
 
     button.classList.add("active");
