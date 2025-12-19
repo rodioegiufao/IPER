@@ -119,6 +119,24 @@ const cliAnnotation = annotationsPlugin.createAnnotation({
     }
 });
 
+const E1_ANNOTATION_ID = "E1";
+const E1_ANNOTATION_POSITION = [17.351, -1.025, -20.397];
+const E1_ASSOCIATED_OBJECT_ID = "0dHnBkUG4Hy9840DTjNSMz";
+
+const e1Annotation = annotationsPlugin.createAnnotation({
+    id: E1_ANNOTATION_ID,
+    worldPos: E1_ANNOTATION_POSITION,
+    occludable: false,
+    markerShown: true,
+    labelShown: true,
+    values: {
+        glyph: "E1",
+        title: "E1",
+        description: "O Bloco do pilar 5 está batendo com o muro de contenção.",
+        markerBGColor: "#9e9e9e"
+    }
+});
+
 function setAnnotationMarkerShown(annotation, shown) {
     if (typeof annotation.setMarkerShown === "function") {
         annotation.setMarkerShown(shown);
@@ -153,11 +171,13 @@ function getAnnotationLabelShown(annotation) {
 
 setAnnotationMarkerShown(cliAnnotation, false);
 setAnnotationLabelShown(cliAnnotation, false);
+setAnnotationMarkerShown(e1Annotation, false);
+setAnnotationLabelShown(e1Annotation, false);
 
-function setupCliAnnotationVisibilityControl(annotation) {
+function setupAnnotationVisibilityControl(annotation, targetPosition, visibilityDistance = CLI_MARKER_VISIBILITY_DISTANCE) {
     const updateVisibility = () => {
         const eye = viewer.camera?.eye;
-        const target = annotation.worldPos || CLI_ANNOTATION_POSITION;
+        const target = annotation.worldPos || targetPosition;
 
         if (!eye || !target) {
             return;
@@ -168,7 +188,7 @@ function setupCliAnnotationVisibilityControl(annotation) {
         const dz = eye[2] - target[2];
         const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-        const shouldShowMarker = distance <= CLI_MARKER_VISIBILITY_DISTANCE;
+        const shouldShowMarker = distance <= visibilityDistance;
         const isMarkerShown = getAnnotationMarkerShown(annotation);
         const isLabelShown = getAnnotationLabelShown(annotation);
 
@@ -190,7 +210,7 @@ function setupCliAnnotationVisibilityControl(annotation) {
     updateVisibility();
 }
 
-function setupCliAnnotationLabelToggle(annotation) {
+function setupAnnotationLabelToggle(annotation) {
     const showCliLabel = (annotationEvent) => {
         if (annotationEvent?.id === annotation.id || annotationEvent?.annotation?.id === annotation.id) {
             setAnnotationLabelShown(annotation, true);
@@ -211,11 +231,13 @@ function setupCliAnnotationLabelToggle(annotation) {
     }
 }
 
-function setupCliAnnotationClickFocus(annotation) {
+function setupAnnotationClickFocus(annotation, associatedObjectId) {
     const focusCliObject = (annotationEvent) => {
         if (annotationEvent?.id === annotation.id || annotationEvent?.annotation?.id === annotation.id) {
             setAnnotationLabelShown(annotation, true);
-            focusObjectById(CLI_ASSOCIATED_OBJECT_ID, { animate: true, xrayOthers: false });
+            if (associatedObjectId) {
+                focusObjectById(associatedObjectId, { animate: true, xrayOthers: false });
+            }
         }
     };
 
@@ -225,10 +247,24 @@ function setupCliAnnotationClickFocus(annotation) {
     }
 }
 
-function setupCliAnnotationInteractions() {
-    setupCliAnnotationVisibilityControl(cliAnnotation);
-    setupCliAnnotationLabelToggle(cliAnnotation);
-    setupCliAnnotationClickFocus(cliAnnotation);
+function setupAnnotationInteractions(annotation, { targetPosition, visibilityDistance = CLI_MARKER_VISIBILITY_DISTANCE, associatedObjectId } = {}) {
+    setupAnnotationVisibilityControl(annotation, targetPosition, visibilityDistance);
+    setupAnnotationLabelToggle(annotation);
+    setupAnnotationClickFocus(annotation, associatedObjectId);
+}
+
+function setupFixedAnnotationInteractions() {
+    setupAnnotationInteractions(cliAnnotation, {
+        targetPosition: CLI_ANNOTATION_POSITION,
+        visibilityDistance: CLI_MARKER_VISIBILITY_DISTANCE,
+        associatedObjectId: CLI_ASSOCIATED_OBJECT_ID
+    });
+
+    setupAnnotationInteractions(e1Annotation, {
+        targetPosition: E1_ANNOTATION_POSITION,
+        visibilityDistance: CLI_MARKER_VISIBILITY_DISTANCE,
+        associatedObjectId: E1_ASSOCIATED_OBJECT_ID
+    });
 }
 /**
  * Configura o painel de ajuda e atalhos de teclado.
@@ -369,7 +405,7 @@ setupHelpPanel();
 setupTransformPanelControls();
 setupCollisionPanelControls();
 setupSearchControls();
-setupCliAnnotationInteractions();
+setupFixedAnnotationInteractions();
 /**
  * Reseta a visibilidade de todos os objetos e remove qualquer destaque ou raio-x.
  */
@@ -2267,5 +2303,6 @@ viewer.scene.canvas.canvas.addEventListener('contextmenu', (event) => {
     canvasElement.addEventListener('touchend', endTouch, { passive: false });
     canvasElement.addEventListener('touchcancel', clearTouch, { passive: true });
 })();
+
 
 
