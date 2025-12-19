@@ -105,6 +105,10 @@ const CLI_ANNOTATION_POSITION = [13.745, 3.150, -0.571];
 const CLI_MARKER_VISIBILITY_DISTANCE = 5;
 const CLI_ASSOCIATED_OBJECT_ID = "1xPrGi4h54xO7J2HjA3NbT";
 
+const E1_ANNOTATION_ID = "E1-ANNOTATION";
+const E1_ANNOTATION_POSITION = [17.351, -1.025, -20.397];
+const E1_MARKER_VISIBILITY_DISTANCE = 5;
+
 const cliAnnotation = annotationsPlugin.createAnnotation({
     id: CLI_ANNOTATION_ID,
     worldPos: CLI_ANNOTATION_POSITION,
@@ -116,6 +120,20 @@ const cliAnnotation = annotationsPlugin.createAnnotation({
         title: "C1",
         description: "O tubo está colidindo com o elétrico",
         markerBGColor: "#e53935"
+    }
+});
+
+const e1Annotation = annotationsPlugin.createAnnotation({
+    id: E1_ANNOTATION_ID,
+    worldPos: E1_ANNOTATION_POSITION,
+    occludable: false,
+    markerShown: true,
+    labelShown: true,
+    values: {
+        glyph: "E1",
+        title: "E1",
+        description: "O Bloco do pilar 5 está batendo com o muro de contenção.",
+        markerBGColor: "#9e9e9e"
     }
 });
 
@@ -153,11 +171,13 @@ function getAnnotationLabelShown(annotation) {
 
 setAnnotationMarkerShown(cliAnnotation, false);
 setAnnotationLabelShown(cliAnnotation, false);
+setAnnotationMarkerShown(e1Annotation, false);
+setAnnotationLabelShown(e1Annotation, false);
 
-function setupCliAnnotationVisibilityControl(annotation) {
+function setupAnnotationVisibilityControl(annotation, defaultPosition, markerVisibilityDistance) {
     const updateVisibility = () => {
         const eye = viewer.camera?.eye;
-        const target = annotation.worldPos || CLI_ANNOTATION_POSITION;
+        const target = annotation.worldPos || defaultPosition;
 
         if (!eye || !target) {
             return;
@@ -168,7 +188,7 @@ function setupCliAnnotationVisibilityControl(annotation) {
         const dz = eye[2] - target[2];
         const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-        const shouldShowMarker = distance <= CLI_MARKER_VISIBILITY_DISTANCE;
+        const shouldShowMarker = distance <= markerVisibilityDistance;
         const isMarkerShown = getAnnotationMarkerShown(annotation);
         const isLabelShown = getAnnotationLabelShown(annotation);
 
@@ -190,15 +210,15 @@ function setupCliAnnotationVisibilityControl(annotation) {
     updateVisibility();
 }
 
-function setupCliAnnotationLabelToggle(annotation) {
-    const showCliLabel = (annotationEvent) => {
+function setupAnnotationLabelToggle(annotation) {
+    const showLabel = (annotationEvent) => {
         if (annotationEvent?.id === annotation.id || annotationEvent?.annotation?.id === annotation.id) {
             setAnnotationLabelShown(annotation, true);
             requestRenderFrame();
         }
     };
 
-    const hideCliLabel = (annotationEvent) => {
+    const hideLabel = (annotationEvent) => {
         if (annotationEvent?.id === annotation.id || annotationEvent?.annotation?.id === annotation.id) {
             setAnnotationLabelShown(annotation, false);
             requestRenderFrame();
@@ -206,29 +226,48 @@ function setupCliAnnotationLabelToggle(annotation) {
     };
 
     if (typeof annotationsPlugin.on === "function") {
-        annotationsPlugin.on("markerMouseEnter", showCliLabel);
-        annotationsPlugin.on("markerMouseLeave", hideCliLabel);
+        annotationsPlugin.on("markerMouseEnter", showLabel);
+        annotationsPlugin.on("markerMouseLeave", hideLabel);
     }
 }
 
-function setupCliAnnotationClickFocus(annotation) {
-    const focusCliObject = (annotationEvent) => {
+function setupAnnotationClickFocus(annotation, associatedObjectId) {
+    if (!associatedObjectId) {
+        return;
+    }
+
+    const focusObject = (annotationEvent) => {
         if (annotationEvent?.id === annotation.id || annotationEvent?.annotation?.id === annotation.id) {
             setAnnotationLabelShown(annotation, true);
-            focusObjectById(CLI_ASSOCIATED_OBJECT_ID, { animate: true, xrayOthers: false });
+            focusObjectById(associatedObjectId, { animate: true, xrayOthers: false });
         }
     };
 
     if (typeof annotationsPlugin.on === "function") {
-        annotationsPlugin.on("markerClicked", focusCliObject);
-        annotationsPlugin.on("labelClicked", focusCliObject);
+        annotationsPlugin.on("markerClicked", focusObject);
+        annotationsPlugin.on("labelClicked", focusObject);
     }
 }
 
-function setupCliAnnotationInteractions() {
-    setupCliAnnotationVisibilityControl(cliAnnotation);
-    setupCliAnnotationLabelToggle(cliAnnotation);
-    setupCliAnnotationClickFocus(cliAnnotation);
+function setupAnnotationInteractions(annotation, options) {
+    const { position, markerVisibilityDistance, associatedObjectId } = options;
+
+    setupAnnotationVisibilityControl(annotation, position, markerVisibilityDistance);
+    setupAnnotationLabelToggle(annotation);
+    setupAnnotationClickFocus(annotation, associatedObjectId);
+}
+
+function setupAnnotations() {
+    setupAnnotationInteractions(cliAnnotation, {
+        position: CLI_ANNOTATION_POSITION,
+        markerVisibilityDistance: CLI_MARKER_VISIBILITY_DISTANCE,
+        associatedObjectId: CLI_ASSOCIATED_OBJECT_ID,
+    });
+
+    setupAnnotationInteractions(e1Annotation, {
+        position: E1_ANNOTATION_POSITION,
+        markerVisibilityDistance: E1_MARKER_VISIBILITY_DISTANCE,
+    });
 }
 /**
  * Configura o painel de ajuda e atalhos de teclado.
@@ -2267,3 +2306,4 @@ viewer.scene.canvas.canvas.addEventListener('contextmenu', (event) => {
     canvasElement.addEventListener('touchend', endTouch, { passive: false });
     canvasElement.addEventListener('touchcancel', clearTouch, { passive: true });
 })();
+
