@@ -9,6 +9,25 @@ const E1_ANNOTATION_ID = "E1";
 const E1_ANNOTATION_POSITION = [17.351, -1.025, -20.397];
 const E1_ASSOCIATED_OBJECT_ID = "0dHnBkUG4Hy9840DTjNSMz";
 
+const PLUVIAL_MARKER_COLOR = "#0d47a1";
+
+const PLUVIAL_ANNOTATIONS_DATA = [
+    { id: "P1", position: [20.055, -0.708, 5.4], code: "1WrxvzCOr9Auw$Q_glClng", collision: "P77" },
+    { id: "P2", position: [-18.397, -0.488, -0.068], code: "2MzABgmtT5VhpuGaXDZPRb", collision: "P55" },
+    { id: "P3", position: [5.672, 0.112, 3.115], code: "2z1mHKFyTDhejCTKD0w0Uo", collision: "dreno" },
+    { id: "P4", position: [14.334, -0.488, 22.171], code: "3ZPkGE6cjFghJn3dcnicuE", collision: "P153" },
+    { id: "P5", position: [19.294, -0.488, 21.169], code: "06nxdC0M52rQ8nuQ3fOC7r", collision: "P147" },
+    { id: "P6", position: [-18.205, -0.488, -0.265], code: "20Q$qrG1n3Qv$YuVEVAZRt", collision: "P55" },
+    { id: "P7", position: [19.506, -0.488, 5.466], code: "2oMata$0P6T8u0gF8kRuAv", collision: "P77" },
+    { id: "P8", position: [-17.769, -0.488, -14.175], code: "1CsWtSpH55Pxs14vmp$sPl", collision: "P20" },
+    { id: "P9", position: [-8.988, -0.488, 12.269], code: "2kT4zEYE5BIQis3xNf7pm_", collision: "P91" },
+    { id: "P10", position: [-8.863, -0.488, 22.451], code: "2n3OVZC4v0GwwXdlnWiPnk", collision: "P149" },
+    { id: "P11", position: [-8.291, -0.558, -19.526], code: "3RpZQMgw5FgQFA72BSwX_$", collision: "P8" },
+    { id: "P12", position: [-6.987, 0.112, 3.068], code: "1KtFZuYs540BJwijIcDM2_", collision: "o dreno" },
+    { id: "P13", position: [-6.798, 0.112, 3.068], code: "0elImHZk10IvQ$pWxGG1zw", collision: "o dreno" },
+    { id: "P14", position: [13.581, -0.728, 22.723], code: "1bfHQYg9f0zBzR37hDF63l", collision: "P153" },
+];
+
 function setAnnotationMarkerShown(annotation, shown) {
     if (typeof annotation.setMarkerShown === "function") {
         annotation.setMarkerShown(shown);
@@ -152,6 +171,21 @@ function createFixedAnnotations(annotationsPlugin) {
     return { cliAnnotation, e1Annotation };
 }
 
+function createPluvialAnnotations(annotationsPlugin) {
+    return PLUVIAL_ANNOTATIONS_DATA.map(({ id, position, code, collision }) => annotationsPlugin.createAnnotation({
+        id,
+        worldPos: position,
+        occludable: false,
+        markerShown: true,
+        labelShown: true,
+        values: {
+            glyph: id,
+            title: id,
+            description: `Código: ${code}. Colidindo com ${collision}.`,
+            markerBGColor: PLUVIAL_MARKER_COLOR,
+        }
+    }));
+}
 export function setupAnnotations(viewer, { requestRenderFrame, focusObjectById }) {
     const annotationsPlugin = new AnnotationsPlugin(viewer, {
         markerHTML: "<div class='annotation-marker' style='background-color: {{markerBGColor}}'>{{glyph}}</div>",
@@ -165,11 +199,17 @@ export function setupAnnotations(viewer, { requestRenderFrame, focusObjectById }
     });
 
     const { cliAnnotation, e1Annotation } = createFixedAnnotations(annotationsPlugin);
+    const pluvialAnnotations = createPluvialAnnotations(annotationsPlugin);
 
     setAnnotationMarkerShown(cliAnnotation, false);
     setAnnotationLabelShown(cliAnnotation, false);
     setAnnotationMarkerShown(e1Annotation, false);
     setAnnotationLabelShown(e1Annotation, false);
+
+        pluvialAnnotations.forEach((annotation) => {
+        setAnnotationMarkerShown(annotation, false);
+        setAnnotationLabelShown(annotation, false);
+    });
 
     setupAnnotationInteractions(annotationsPlugin, cliAnnotation, {
         viewer,
@@ -189,5 +229,17 @@ export function setupAnnotations(viewer, { requestRenderFrame, focusObjectById }
         focusObjectById
     });
 
-    return { annotationsPlugin, annotations: { cliAnnotation, e1Annotation } };
+    PLUVIAL_ANNOTATIONS_DATA.forEach(({ position, code }, index) => {
+        const annotation = pluvialAnnotations[index];
+        setupAnnotationInteractions(annotationsPlugin, annotation, {
+            viewer,
+            requestRenderFrame,
+            targetPosition: position,
+            visibilityDistance: CLI_MARKER_VISIBILITY_DISTANCE,
+            associatedObjectId: code,
+            focusObjectById,
+        });
+    });
+
+    return { annotationsPlugin, annotations: { cliAnnotation, e1Annotation, pluvialAnnotations } };
 }
