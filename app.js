@@ -1233,8 +1233,24 @@ function buildIfcPropertiesLines(doc, objectId, maxWidth) {
     return lines;
 }
 
+function getCollisionPosition(objectId) {
+    const aabb = viewer.scene.getAABB(objectId);
+
+    if (!aabb) {
+        return null;
+    }
+
+    const center = [
+        (aabb[0] + aabb[3]) / 2,
+        (aabb[1] + aabb[4]) / 2,
+        (aabb[2] + aabb[5]) / 2
+    ];
+
+    return center.map((value) => Number.isFinite(value) ? Number(value.toFixed(3)) : 0);
+}
+
 async function downloadCollisionsAsPdf() {
-    
+
     if (!lastCollisionResults.length) {
         return;
     }
@@ -1327,6 +1343,21 @@ async function downloadCollisionsAsPdf() {
 
         cursorY += spacingAfterItem;
     });
+
+    // Bloco final com resumo estruturado das colisões
+    const structuredSummary = lastCollisionResults.map(({ objectId, collidingWith }, index) => {
+        const position = getCollisionPosition(objectId);
+        const positionText = position ? `[${position.join(", ")}]` : "[]";
+        const collisionsText = collidingWith.join(", ");
+
+        return `{ id: "P${index + 1}", position: ${positionText}, code: "${objectId}", collision: "${collisionsText}" },`;
+    });
+
+    doc.addPage();
+    doc.setFontSize(12);
+    doc.text("Resumo de colisões (formato estruturado)", leftMargin, topMargin);
+    doc.setFontSize(10);
+    doc.text(structuredSummary, leftMargin, topMargin + lineHeight, { maxWidth });
 
     doc.save("colisoes.pdf");
 }
@@ -2128,4 +2159,5 @@ viewer.scene.canvas.canvas.addEventListener('contextmenu', (event) => {
     canvasElement.addEventListener('touchend', endTouch, { passive: false });
     canvasElement.addEventListener('touchcancel', clearTouch, { passive: true });
 })();
+
 
