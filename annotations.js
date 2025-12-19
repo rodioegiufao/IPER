@@ -33,6 +33,10 @@ const PLUVIAL_ANNOTATIONS_DATA = [
     { id: "P19", position: [-6.513, 8.213, 3.279], code: "2nS2r5Pfv3ExPM_EUPTdHf", collision: "colidindo com o P63" },
     { id: "P20", position: [-6.513, 7.440, 3.279], code: "2_iEYrx6121940s3so8Qfq", collision: "colidindo com o P63" },
     { id: "P21", position: [-6.540, 8.213, -16.743], code: "3Cru1qzlPEpevU8Hx8Ia3U", collision: "colidindo com o P10" },
+    { id: "P22", position: [-6.737,  7.288, -16.742], code: "0EgtHiRSj218P7ZUk5DDmc", collision: "colidindo com o P10" },
+    { id: "P23", position: [14.007,  5.548, 22.171], code: "0RjajtPtn7lQqtMF_DGbXkc", collision: "colidindo com o VC 112" },
+    { id: "P24", position: [-8.852,  -1.000, 16.350], code: "0dHn9sUG4Hy9840DTjNSMz", collision: "colidindo com o P121" },
+    { id: "P25", position: [-20.612,  -0.975, 0.190], code: "0dHnLEUG4Hy9840DTjNSMz", collision: "colidindo com o P54" },
 ];
 
 function setAnnotationMarkerShown(annotation, shown) {
