@@ -1,9 +1,9 @@
 import { AnnotationsPlugin } from "https://cdn.jsdelivr.net/npm/@xeokit/xeokit-sdk@latest/dist/xeokit-sdk.min.es.js";
 
 const CLI_ANNOTATION_ID = "CLI-1";
-const CLI_ANNOTATION_POSITION = [-5.241, 10.305, 0.380];
+const CLI_ANNOTATION_POSITION = [13.757, 3.150, -5.724];
 const CLI_MARKER_VISIBILITY_DISTANCE = 10;
-const CLI_ASSOCIATED_OBJECT_ID = "0VJuYCFvPDsAZYaEc4uDrZ";
+const CLI_ASSOCIATED_OBJECT_ID = "3RlDYoCOXFBftt5FQ7AyKS";
 
 const E1_ANNOTATION_ID = "E1";
 const E1_ANNOTATION_POSITION = [17.351, -1.025, -20.397];
