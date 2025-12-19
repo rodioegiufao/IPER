@@ -861,8 +861,8 @@ html, body {
 
 .annotation-marker {
     position: absolute;
-    width: 24px;
-    height: 24px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     background: #0057ff;
     border: 2px solid #ffffff;
@@ -870,7 +870,7 @@ html, body {
     display: grid;
     place-items: center;
     color: #fff;
-    font-size: 12px;
+    font-size: 16px;
     font-weight: 700;
     z-index: 150000;
 }
@@ -897,3 +897,4 @@ html, body {
     font-size: 14px;
     line-height: 1.45;
 }
+
