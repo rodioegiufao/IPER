@@ -14,7 +14,8 @@ import {
     TreeViewPlugin,
     SectionPlanesPlugin,
     LineSet,
-    buildGridGeometry
+    buildGridGeometry,
+    AnnotationsPlugin
 } from "https://cdn.jsdelivr.net/npm/@xeokit/xeokit-sdk@latest/dist/xeokit-sdk.min.es.js";
 
 const { jsPDF } = window.jspdf;
@@ -84,6 +85,151 @@ function createGroundGrid() {
 
 createGroundGrid();
 
+// -----------------------------------------------------------------------------
+// 1.1 Anotações fixas
+// -----------------------------------------------------------------------------
+
+const annotationsPlugin = new AnnotationsPlugin(viewer, {
+    markerHTML: "<div class='annotation-marker' style='background-color: {{markerBGColor}}'>{{glyph}}</div>",
+    labelHTML: "<div class='annotation-label'><div class='annotation-title'>{{title}}</div><div class='annotation-desc'>{{description}}</div></div>",
+    values: {
+        markerBGColor: "#0057ff",
+        glyph: "●",
+        title: "Anotação",
+        description: "Sem descrição"
+    }
+});
+
+const CLI_ANNOTATION_ID = "CLI-1";
+const CLI_ANNOTATION_POSITION = [13.745, 3.150, -0.571];
+const CLI_MARKER_VISIBILITY_DISTANCE = 5;
+const CLI_ASSOCIATED_OBJECT_ID = "1xPrGi4h54xO7J2HjA3NbT";
+
+const cliAnnotation = annotationsPlugin.createAnnotation({
+    id: CLI_ANNOTATION_ID,
+    worldPos: CLI_ANNOTATION_POSITION,
+    occludable: false,
+    markerShown: true,
+    labelShown: true,
+    values: {
+        glyph: "C1",
+        title: "C1",
+        description: "O tubo está colidindo com o elétrico",
+        markerBGColor: "#e53935"
+    }
+});
+
+function setAnnotationMarkerShown(annotation, shown) {
+    if (typeof annotation.setMarkerShown === "function") {
+        annotation.setMarkerShown(shown);
+    } else {
+        annotation.markerShown = shown;
+    }
+}
+
+function getAnnotationMarkerShown(annotation) {
+    if (typeof annotation.getMarkerShown === "function") {
+        return annotation.getMarkerShown();
+    }
+
+    return Boolean(annotation.markerShown);
+}
+
+function setAnnotationLabelShown(annotation, shown) {
+    if (typeof annotation.setLabelShown === "function") {
+        annotation.setLabelShown(shown);
+    } else {
+        annotation.labelShown = shown;
+    }
+}
+
+function getAnnotationLabelShown(annotation) {
+    if (typeof annotation.getLabelShown === "function") {
+        return annotation.getLabelShown();
+    }
+
+    return Boolean(annotation.labelShown);
+}
+
+setAnnotationMarkerShown(cliAnnotation, false);
+setAnnotationLabelShown(cliAnnotation, false);
+
+function setupCliAnnotationVisibilityControl(annotation) {
+    const updateVisibility = () => {
+        const eye = viewer.camera?.eye;
+        const target = annotation.worldPos || CLI_ANNOTATION_POSITION;
+
+        if (!eye || !target) {
+            return;
+        }
+
+        const dx = eye[0] - target[0];
+        const dy = eye[1] - target[1];
+        const dz = eye[2] - target[2];
+        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+        const shouldShowMarker = distance <= CLI_MARKER_VISIBILITY_DISTANCE;
+        const isMarkerShown = getAnnotationMarkerShown(annotation);
+        const isLabelShown = getAnnotationLabelShown(annotation);
+
+        if (isMarkerShown !== shouldShowMarker) {
+            setAnnotationMarkerShown(annotation, shouldShowMarker);
+            requestRenderFrame();
+        }
+
+        if (!shouldShowMarker && isLabelShown) {
+            setAnnotationLabelShown(annotation, false);
+            requestRenderFrame();
+        }
+    };
+
+    if (viewer.camera?.on) {
+        viewer.camera.on("matrix", updateVisibility);
+    }
+
+    updateVisibility();
+}
+
+function setupCliAnnotationLabelToggle(annotation) {
+    const showCliLabel = (annotationEvent) => {
+        if (annotationEvent?.id === annotation.id || annotationEvent?.annotation?.id === annotation.id) {
+            setAnnotationLabelShown(annotation, true);
+            requestRenderFrame();
+        }
+    };
+
+    const hideCliLabel = (annotationEvent) => {
+        if (annotationEvent?.id === annotation.id || annotationEvent?.annotation?.id === annotation.id) {
+            setAnnotationLabelShown(annotation, false);
+            requestRenderFrame();
+        }
+    };
+
+    if (typeof annotationsPlugin.on === "function") {
+        annotationsPlugin.on("markerMouseEnter", showCliLabel);
+        annotationsPlugin.on("markerMouseLeave", hideCliLabel);
+    }
+}
+
+function setupCliAnnotationClickFocus(annotation) {
+    const focusCliObject = (annotationEvent) => {
+        if (annotationEvent?.id === annotation.id || annotationEvent?.annotation?.id === annotation.id) {
+            setAnnotationLabelShown(annotation, true);
+            focusObjectById(CLI_ASSOCIATED_OBJECT_ID, { animate: true, xrayOthers: false });
+        }
+    };
+
+    if (typeof annotationsPlugin.on === "function") {
+        annotationsPlugin.on("markerClicked", focusCliObject);
+        annotationsPlugin.on("labelClicked", focusCliObject);
+    }
+}
+
+function setupCliAnnotationInteractions() {
+    setupCliAnnotationVisibilityControl(cliAnnotation);
+    setupCliAnnotationLabelToggle(cliAnnotation);
+    setupCliAnnotationClickFocus(cliAnnotation);
+}
 /**
  * Configura o painel de ajuda e atalhos de teclado.
  */
@@ -223,6 +369,7 @@ setupHelpPanel();
 setupTransformPanelControls();
 setupCollisionPanelControls();
 setupSearchControls();
+setupCliAnnotationInteractions();
 /**
  * Reseta a visibilidade de todos os objetos e remove qualquer destaque ou raio-x.
  */
@@ -544,7 +691,7 @@ function toggleSearchBar(forceOpen) {
     closeSearchBar();
 }
 
-function focusObjectById(objectId, { animate = true } = {}) {
+function focusObjectById(objectId, { animate = true, xrayOthers = true } = {}) {
     if (!modelIsolateController || !objectId) {
         return false;
     }
@@ -559,8 +706,10 @@ function focusObjectById(objectId, { animate = true } = {}) {
     modelIsolateController.setObjectsVisible(allIds, true);
     modelIsolateController.setObjectsHighlighted(allIds, false);
 
-    if (allIds.length) {
+    if (xrayOthers && allIds.length) {
         modelIsolateController.setObjectsXRayed(allIds, true);
+    } else {
+        modelIsolateController.setObjectsXRayed(allIds, false);
     }
 
     modelIsolateController.setObjectsXRayed([targetId], false);
@@ -724,7 +873,6 @@ const defaultModels = [
     { id: "IFC_EMT_ESC", src: "assets/modelo-16.xkt" },
     { id: "IFC_EMT_COB", src: "assets/modelo-17.xkt" },
 ];
-
 defaultModels.forEach(loadDefaultModel);
 
 if (transformModelSelect) {
