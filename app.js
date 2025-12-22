@@ -179,7 +179,7 @@ const DEFAULT_MODEL_TRANSFORMS = {
     IFC_ELE: { position: [0.16, 0, -0.19] },
     //IFC_ECX: { position: [-14.08, 0, 0] },
     IFC_SAN: { position: [0.2, 0, 13.9], rotation: [0, 90, 0] },
-    IFC_SUB: { position: [2, 0, 2.1], rotation: [0, 95.863, 0] },
+    IFC_SUB: { position: [2, 0, 2.54], rotation: [0, 95.863, 0] },
     IFC_INC: { position: [0.15, 0, -0.15], rotation: [0, 90, 0] },
     IFC_HID: { position: [0.2, 0, 13.9], rotation: [0, 90, 0] },
     IFC_PLU: { position: [0.2, 0, 13.9], rotation: [0, 90, 0] },
@@ -2161,6 +2161,7 @@ viewer.scene.canvas.canvas.addEventListener('contextmenu', (event) => {
     canvasElement.addEventListener('touchend', endTouch, { passive: false });
     canvasElement.addEventListener('touchcancel', clearTouch, { passive: true });
 })();
+
 
 
 
