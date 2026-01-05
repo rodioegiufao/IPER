@@ -82,10 +82,18 @@ html, body {
 
 [data-mode="mobile"] #toolbar.open {
     cursor: auto;
+    top: 72px;
 }
 
 [data-mode="mobile"] #toolbar {
     display: flex;
+}
+
+[data-mode="mobile"] #toolbar:not(.open) {
+    padding: 0;
+    width: auto;
+    background: transparent;
+    box-shadow: none;
 }
 
 [data-mode="mobile"] #toolbar:not(.open) .tool-button {
@@ -96,19 +104,6 @@ html, body {
     display: flex;
 }
 
-[data-mode="mobile"] #toolbar::before {
-    content: attr(data-label);
-    display: block;
-    width: 100%;
-    text-align: center;
-    font-weight: 600;
-    color: #f1f1f1;
-    margin-bottom: 6px;
-    padding: 6px 8px;
-    border-radius: 6px;
-    background-color: rgba(255, 255, 255, 0.08);
-    pointer-events: none;
-}
 
 #mobileToolbarToggle {
     position: fixed;
@@ -133,7 +128,7 @@ html, body {
     background-color: rgba(0, 123, 255, 0.9);
 }
 
-#saoPanel {
+#helpPanel {
     top: 20px;
     right: 20px;
     left: 20px;
