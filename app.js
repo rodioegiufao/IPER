@@ -218,6 +218,7 @@ const collisionPanel = document.getElementById("collisionPanel");
 const collisionPanelToggleButton = document.getElementById("btnCollisionPanel");
 const closeCollisionPanelButton = document.getElementById("closeCollisionPanel");
 const collisionModelASelect = document.getElementById("collisionModelA");
+const collisionRadiusInput = document.getElementById("collisionRadius");
 const runCollisionCheckButton = document.getElementById("runCollisionCheck");
 const downloadCollisionPdfButton = document.getElementById("downloadCollisionPdf");
 const collisionSummary = document.getElementById("collisionSummary");
@@ -261,6 +262,11 @@ function requestRenderFrame() {
 function parseNumber(value, fallback = 0) {
     const parsed = parseFloat(value);
     return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function getCollisionRadiusMeters() {
+    const radiusMm = parseNumber(collisionRadiusInput?.value, 0);
+    return Math.max(0, radiusMm) / 1000;
 }
 
 function getAllObjectIds() {
@@ -736,6 +742,7 @@ const defaultModels = [
     { id: "IFC_EMT_COB", src: "assets/modelo-17.xkt" },
     { id: "IFC_SUB", src: "assets/modelo-20.xkt" },
 ];
+
 defaultModels.forEach(loadDefaultModel);
 
 if (transformModelSelect) {
@@ -920,21 +927,25 @@ function getObjectMetaModelId(objectId) {
     return metaObject?.metaModel?.id || null;
 }
 
-function intersectsAABB(aabbA, aabbB) {
+function intersectsAABB(aabbA, aabbB, overlapTolerance = 0) {
     if (!aabbA || !aabbB) {
         return false;
     }
 
-    return !(
-        aabbA[0] > aabbB[3] ||
-        aabbA[3] < aabbB[0] ||
-        aabbA[1] > aabbB[4] ||
-        aabbA[4] < aabbB[1] ||
-        aabbA[2] > aabbB[5] ||
-        aabbA[5] < aabbB[2]
-    );
-}
+    const overlapX = Math.min(aabbA[3], aabbB[3]) - Math.max(aabbA[0], aabbB[0]);
+    const overlapY = Math.min(aabbA[4], aabbB[4]) - Math.max(aabbA[1], aabbB[1]);
+    const overlapZ = Math.min(aabbA[5], aabbB[5]) - Math.max(aabbA[2], aabbB[2]);
 
+    if (overlapX <= 0 || overlapY <= 0 || overlapZ <= 0) {
+        return false;
+    }
+
+    if (overlapTolerance <= 0) {
+        return true;
+    }
+
+    return overlapX >= overlapTolerance && overlapY >= overlapTolerance && overlapZ >= overlapTolerance;
+}
 function mergeAABBs(aabbs) {
     const valid = aabbs.filter(Boolean);
 
@@ -1437,6 +1448,8 @@ function findAndRenderCollisions(modelId) {
         collisionsMap.get(base).add(target);
     };
     
+    const overlapTolerance = getCollisionRadiusMeters();
+
     for (let i = 0; i < objects.length; i++) {
         const objectA = objects[i];
         const aabbA = viewer.scene.getAABB(objectA);
@@ -1449,7 +1462,7 @@ function findAndRenderCollisions(modelId) {
             const objectB = externalObjects[j];
             const aabbB = viewer.scene.getAABB(objectB);
 
-            if (aabbB && intersectsAABB(aabbA, aabbB)) {
+            if (aabbB && intersectsAABB(aabbA, aabbB, overlapTolerance)) {
                 addCollision(objectA, objectB);
             }
         }
@@ -1460,7 +1473,10 @@ function findAndRenderCollisions(modelId) {
         collidingWith: Array.from(set)
     }));
 
-    collisionSummary.textContent = `${collisions.length} objeto(s) do modelo ${modelId} com colisão em outros modelos.`;
+    const overlapLabel = overlapTolerance > 0
+        ? ` (raio mínimo ${Math.round(overlapTolerance * 1000)} mm)`
+        : "";
+    collisionSummary.textContent = `${collisions.length} objeto(s) do modelo ${modelId} com colisão em outros modelos.${overlapLabel}`;
     setCollisionState(collisions, modelId);
     renderCollisionResults(collisions);
 }
@@ -2161,12 +2177,3 @@ viewer.scene.canvas.canvas.addEventListener('contextmenu', (event) => {
     canvasElement.addEventListener('touchend', endTouch, { passive: false });
     canvasElement.addEventListener('touchcancel', clearTouch, { passive: true });
 })();
-
-
-
-
-
-
-
-
-
