@@ -150,11 +150,14 @@
         <label class="collision-label" for="collisionModelA">Modelo</label>
         <select id="collisionModelA" aria-label="Modelo para analisar"></select>
 
+        <label class="collision-label" for="collisionRadius">Raio de colisão (mm)</label>
+        <input id="collisionRadius" type="number" min="0" step="1" value="0" aria-label="Raio mínimo de colisão em milímetros" />
+
         <div class="collision-actions">
             <button type="button" id="runCollisionCheck">Procurar colisões</button>
             <button type="button" id="downloadCollisionPdf" disabled>Baixar PDF das colisões</button>
         </div>
-
+        
         <p id="collisionSummary" class="collision-summary">Carregue um modelo para iniciar a análise.</p>
         <ul id="collisionResults" class="collision-results" aria-live="polite"></ul>
     </div>
@@ -308,4 +311,3 @@
     </script>
 </body>
 </html>
-
