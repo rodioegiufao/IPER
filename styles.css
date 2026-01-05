@@ -746,7 +746,8 @@ html, body {
 }
 
 #collisionModelA,
-#collisionModelB {
+#collisionModelB,
+#collisionRadius {
     width: 100%;
     padding: 8px 10px;
     border-radius: 6px;
@@ -754,6 +755,7 @@ html, body {
     background: #1d1d1d;
     color: #f7f7f7;
     margin-bottom: 10px;
+    box-sizing: border-box;
 }
 
 .collision-actions {
