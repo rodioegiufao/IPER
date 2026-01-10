@@ -191,11 +191,11 @@ const DEFAULT_MODEL_TRANSFORMS = {
     IFC_CLI: { position: [0.16, 0, 13.9], rotation: [0, 90, 0]  },
     //IFC_EST_CT: { position: [-54, 0, -5.3] },
     IFC_ALI: { position: [0.15, 0, -0.17] },
-    IFC_EST_SQD: { position: [18.1, 0, -13.92] },
+    IFC_EST_SQD: { position: [18.1, -0.55, -13.92] },
     IFC_EST_SUB: { position: [27.66, 0, -22.35], rotation: [0, -84, 0] },
     IFC_EST_CT: { position: [-14.4, 0, -16.27], rotation: [0, 90, 0]  },
     IFC_EST_MR: { position: [35.25, 0.4, 20.2], rotation: [0, 90, 0]  },
-    IFC_EST_MRC: { position: [-22.95, -0.65, 28.88] },
+    IFC_EST_MRC: { position: [-22.95, 0.4, 28.88] },
     IFC_EMT_ESC: { position: [0.14, 0.35, -0.15], rotation: [0, 90, 0]  },
     IFC_EMT_COB: { position: [0.14, 0, -0.15], rotation: [0, 90, 0]  },
 };
@@ -2177,3 +2177,4 @@ viewer.scene.canvas.canvas.addEventListener('contextmenu', (event) => {
     canvasElement.addEventListener('touchend', endTouch, { passive: false });
     canvasElement.addEventListener('touchcancel', clearTouch, { passive: true });
 })();
+
